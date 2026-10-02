@@ -133,6 +133,7 @@
   --color-canvas-accent-soft: var(--canvas-accent-soft);
   --color-canvas-glass: var(--canvas-glass);
   --color-canvas-glass-text: var(--canvas-glass-text);
+  --color-canvas-border-strong: var(--canvas-border-strong);
   --color-note-yellow: var(--note-yellow);
   --color-note-yellow-ink: var(--note-yellow-ink);
   --color-note-pink: var(--note-pink);
@@ -305,6 +306,7 @@
   --canvas-glass-highlight: rgb(255 255 255 / 0.7);
   --canvas-glass-text: #1d1d1f;
   --canvas-header-tint: rgb(0 0 0 / 0.06);
+  --canvas-border-strong: rgb(0 0 0 / 0.18);
   --note-yellow: #fff9c4;
   --note-yellow-ink: #5d4037;
   --note-pink: #f8bbd0;
@@ -458,6 +460,7 @@
   --canvas-glass-highlight: rgb(255 255 255 / 0.14);
   --canvas-glass-text: #f5f5f7;
   --canvas-header-tint: rgb(255 255 255 / 0.1);
+  --canvas-border-strong: rgb(255 255 255 / 0.14);
   --note-yellow: #fff9c4;
   --note-yellow-ink: #5d4037;
   --note-pink: #f8bbd0;

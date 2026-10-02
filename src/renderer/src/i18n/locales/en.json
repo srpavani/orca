@@ -17445,7 +17445,11 @@
         "stateBlocked": "Waiting for you",
         "stateWaiting": "Waiting",
         "stateDone": "Done",
-        "stateUnknown": "No status yet"
+        "stateUnknown": "No status yet",
+        "floorsTitle": "Floors",
+        "newFloorPlaceholder": "Floor {number}",
+        "newFloor": "New floor",
+        "renameFloor": "Rename floor"
       }
     },
     "i18n": {

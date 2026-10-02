@@ -39,6 +39,8 @@ type AgentCanvasState = Omit<AgentCanvasSnapshot, 'revision'> & {
   activeLevelId: string | null
   /** Drawing tool armed on the toolbar; null means pointer/wire mode. */
   drawTool: 'rect' | 'ellipse' | 'arrow' | 'freehand' | null
+  /** True while the floor stack is engaged. */
+  floorOverview: boolean
 }
 
 const LOCAL_RUNTIME = { kind: 'local' } as const
@@ -63,7 +65,8 @@ const store = createStore<AgentCanvasState>(() => ({
   hostNotes: {},
   loaded: false,
   activeLevelId: null,
-  drawTool: null
+  drawTool: null,
+  floorOverview: false
 }))
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
@@ -257,7 +260,9 @@ export function removeCanvasNode(nodeId: CanvasNodeId): void {
 
 /** View-only state (active floor, armed draw tool); never persisted to the host. */
 export function setCanvasViewState(
-  patch: Partial<Pick<AgentCanvasState, 'activeLevelId' | 'drawTool' | 'selectedNodeId'>>
+  patch: Partial<
+    Pick<AgentCanvasState, 'activeLevelId' | 'drawTool' | 'selectedNodeId' | 'floorOverview'>
+  >
 ): void {
   store.setState(patch)
 }
