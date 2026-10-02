@@ -1,4 +1,4 @@
-import { everyNode, findNode, sessionNode } from '../../shared/spatial-canvas/levels'
+import { everyNode, findNode, levelsOf, sessionNode } from '../../shared/spatial-canvas/levels'
 import { reachableFrom, type CanvasReach } from '../../shared/spatial-canvas/reachability'
 import type { AgentCanvasSnapshot } from '../../shared/spatial-canvas/agent-canvas-snapshot'
 import type { CanvasNotePeer, CanvasSessionPeer } from '../../shared/spatial-canvas/reachability'
@@ -15,10 +15,39 @@ export class AgentCanvasAccessError extends Error {
 
 export type AgentCanvasNoteView = CanvasNotePeer & { body: string }
 
+export type AgentCanvasFloorView = {
+  id: string | null
+  name: string
+  /** Git branch this floor is pinned to, when it is one branch's floor. */
+  branch: string | null
+  sessions: number
+  current: boolean
+}
+
 export type AgentCanvasPeerView = {
   self: CanvasSessionPeer
   sessions: readonly CanvasSessionPeer[]
   notes: readonly AgentCanvasNoteView[]
+  floors: readonly AgentCanvasFloorView[]
+}
+
+/** Floors as the calling agent sees them: name, branch, occupancy, and which one it is on. */
+export function viewFloors(
+  document: AgentCanvasSnapshot['document'],
+  caller: CanvasSessionPeer
+): AgentCanvasFloorView[] {
+  const own = document.root.nodes.find((node) => node.id === caller.nodeId)
+  void own
+  return levelsOf(document).map((level) => ({
+    id: level.id,
+    name: level.name,
+    branch:
+      level.id === null
+        ? null
+        : (document.levels.find((entry) => entry.id === level.id)?.branch ?? null),
+    sessions: level.contents.nodes.filter((node) => node.content.kind === 'session').length,
+    current: level.contents.nodes.some((node) => node.id === caller.nodeId)
+  }))
 }
 
 function requireCaller(snapshot: AgentCanvasSnapshot, callerSessionId: string): CanvasReach {
@@ -32,7 +61,7 @@ function requireCaller(snapshot: AgentCanvasSnapshot, callerSessionId: string): 
   return reach
 }
 
-/** What the calling agent may see: itself, wired sessions, and its note chain with bodies. */
+/** What the calling agent may see: itself, wired sessions, its note chain, and the floors. */
 export function viewPeers(
   snapshot: AgentCanvasSnapshot,
   callerSessionId: string
@@ -41,7 +70,8 @@ export function viewPeers(
   return {
     self: reach.self!,
     sessions: reach.sessions,
-    notes: reach.notes.map((note) => ({ ...note, body: snapshot.notes[note.noteId] ?? '' }))
+    notes: reach.notes.map((note) => ({ ...note, body: snapshot.notes[note.noteId] ?? '' })),
+    floors: viewFloors(snapshot.document, reach.self!)
   }
 }
 

@@ -64,6 +64,11 @@ function relabel(
     if (node.content.kind !== 'session') {
       return node
     }
+    // A pinned canvas name outranks the terminal title: peers address an agent by the
+    // name it was recruited with, so a title change must not rename it mid-conversation.
+    if (node.content.name) {
+      return node
+    }
     const label = labels.get(node.content.sessionId)
     if (label === undefined || label === node.content.label) {
       return node

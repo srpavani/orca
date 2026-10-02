@@ -42,6 +42,11 @@ export type CanvasSessionContent = {
   roleId: string | null
   /** The lead agent coordinates; peers address it by name. */
   isLead: boolean
+  /**
+   * Canvas-only name the user or a recruiter pinned. While set, the node keeps
+   * this label through terminal title changes; absent means follow the title.
+   */
+  name?: string | null
 }
 
 /** Sticky-note paper colours. A note keeps its colour in every theme. */

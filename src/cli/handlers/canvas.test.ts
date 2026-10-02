@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { HandlerContext } from '../dispatch'
-import { CANVAS_HANDLERS, callerParams, formatAsk, formatPeers } from './canvas'
+import { CANVAS_HANDLERS, callerParams, formatAsk, formatBatch, formatPeers } from './canvas'
 
 const originalHandle = process.env.ORCA_TERMINAL_HANDLE
 const originalTab = process.env.ORCA_TAB_ID
@@ -88,11 +88,30 @@ describe('formatting', () => {
       notes: [
         { noteId: 'p', displayName: 'Plan', depth: 0, readOnly: false, body: 'step 1\nmore' },
         { noteId: 'd', displayName: 'Detail', depth: 1, readOnly: true, body: 'x' }
+      ],
+      floors: [
+        { name: 'Ground', branch: null, sessions: 2, current: true },
+        { name: 'Experiment', branch: 'feature/x', sessions: 1, current: false }
       ]
     })
     expect(text).toContain('ask the user to wire you')
     expect(text).toContain('  - Plan: step 1')
     expect(text).toContain('    - Detail [read-only]: x')
+    expect(text).toContain('  - Ground: 2 session(s) ← you are here')
+    expect(text).toContain('  - Experiment [feature/x]: 1 session(s)')
+  })
+
+  it('renders a batch reply per peer, marking failures and unfinished work', () => {
+    const text = formatBatch({
+      replies: [
+        { label: 'Backend', reply: 'port 3000', settled: true },
+        { label: 'Slow', reply: 'working', settled: false },
+        { label: 'Gone', error: 'canvas_peer_not_connected' }
+      ]
+    })
+    expect(text).toContain('── Backend ──\nport 3000')
+    expect(text).toContain('(not settled — still working)')
+    expect(text).toContain('(failed: canvas_peer_not_connected)')
   })
 
   it('marks an unsettled reply', () => {

@@ -67,6 +67,49 @@ prompt, with terminal escapes stripped.
 - The reply is the peer's terminal output, so it may contain tool chatter. Extract the answer;
   if it is unclear, ask a narrower follow-up instead of guessing.
 
+Ask several peers at once with a JSON map; the replies come back per peer and the call costs the
+slowest one, not the sum:
+
+```text
+ORCA canvas ask --batch '{"Backend": "list the routes", "Reviewer": "review the diff"}' --json
+```
+
+## See what a peer is doing without interrupting it
+
+```text
+ORCA canvas check <label> [--lines <n>] --json
+```
+
+`check` reads the peer's current screen and sends nothing. Use it when you only need to know
+whether the work you delegated has finished — an `ask` interrupts whatever the peer is doing.
+
+## Grow the team
+
+```text
+ORCA canvas recruit <name> [--agent <preset>] [--prompt "<text>"] [--command "<cmd>"] [--floor <name>] --json
+```
+
+Spawns a new agent terminal in your workspace, names it, and wires it to you, so it is immediately
+askable. Use it when the work genuinely needs a teammate that does not exist yet:
+
+- **Look before you recruit.** Run `peers` first. If a wired session already covers the job, `ask`
+  it — a recruit costs the user a terminal and a model session.
+- **Name it yourself**, short and distinctive. The name is how the team addresses it from then on,
+  and it must be unique on the canvas (`canvas_label_taken`). Do not name it after its role.
+- `--floor` places it on another floor (see the floor list at the end of `peers`), still reachable
+  from you; without it the recruit lands on your own floor.
+- `--prompt` hands the new agent its first instruction, which is usually cheaper than recruiting
+  blank and asking afterwards.
+
+## Notify the user
+
+```text
+ORCA canvas notify "<message>" --json
+```
+
+Sends a desktop notification. Only when the user asked to be told, or when work finished long
+after they stopped watching. One line: what finished, and what to look at.
+
 ## Shared notes
 
 ```text
@@ -95,3 +138,6 @@ for logs and status lines so concurrent writers do not erase each other.
 | `canvas_peer_not_running` | The peer's terminal is closed. | Tell the user; do not start one yourself. |
 | `canvas_note_not_connected` / `canvas_note_not_found` | The note is not in your chain. | Re-run `peers`; ask the user to wire it. |
 | `canvas_note_read_only` | The user locked the note. | Report it; do not copy it elsewhere to edit. |
+| `canvas_label_taken` | A session already has that name. | Pick another name, or ask the existing session. |
+| `canvas_floor_not_found` | No floor has that name. | Re-run `peers` and use a floor from its list. |
+| `canvas_recruit_failed` | The terminal could not be spawned or did not come up. | Report it; do not retry in a loop. |

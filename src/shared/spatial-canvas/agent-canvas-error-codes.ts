@@ -7,7 +7,10 @@ export const AGENT_CANVAS_ERROR_CODES = [
   'canvas_peer_not_running',
   'canvas_note_not_found',
   'canvas_note_not_connected',
-  'canvas_note_read_only'
+  'canvas_note_read_only',
+  'canvas_label_taken',
+  'canvas_floor_not_found',
+  'canvas_recruit_failed'
 ] as const
 
 export type AgentCanvasErrorCode = (typeof AGENT_CANVAS_ERROR_CODES)[number]

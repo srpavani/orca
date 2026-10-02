@@ -36,10 +36,13 @@ import {
 } from './accounts-params'
 import {
   AgentCanvasAskParams,
+  AgentCanvasCheckParams,
   AgentCanvasGetParams,
   AgentCanvasNoteReadParams,
   AgentCanvasNoteWriteParams,
+  AgentCanvasNotifyParams,
   AgentCanvasPeersParams,
+  AgentCanvasRecruitParams,
   AgentCanvasSaveParams
 } from './agent-canvas-params'
 import { PrepareCodexForWslPaneParams } from './agent-hooks-params'
@@ -724,10 +727,13 @@ export const RPC_PARAMS_BY_METHOD = {
   'browser.viewport': Viewport,
   'browser.wait': Wait,
   'canvas.ask': AgentCanvasAskParams,
+  'canvas.check': AgentCanvasCheckParams,
   'canvas.get': AgentCanvasGetParams,
   'canvas.noteRead': AgentCanvasNoteReadParams,
   'canvas.noteWrite': AgentCanvasNoteWriteParams,
+  'canvas.notify': AgentCanvasNotifyParams,
   'canvas.peers': AgentCanvasPeersParams,
+  'canvas.recruit': AgentCanvasRecruitParams,
   'canvas.save': AgentCanvasSaveParams,
   'clipboard.abortImageUpload': AbortImageUpload,
   'clipboard.appendImageUploadChunk': AppendImageUploadChunk,

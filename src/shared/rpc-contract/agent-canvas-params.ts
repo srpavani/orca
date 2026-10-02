@@ -46,3 +46,34 @@ export const AgentCanvasNoteWriteParams = z.object({
   body: z.string().max(AGENT_CANVAS_NOTE_MAX_CHARS),
   mode: z.enum(['replace', 'append'])
 })
+
+const PeerName = z.string().min(1).max(200)
+
+/** Read a peer's current screenful without sending it anything. */
+export const AgentCanvasCheckParams = z.object({
+  ...Caller,
+  to: PeerName,
+  /** How many scrollback lines to return; the host trims to the last screen by default. */
+  lines: z.number().int().min(1).max(2_000).optional()
+})
+
+export const AgentCanvasRecruitParams = z.object({
+  ...Caller,
+  /** Canvas name for the new terminal; it is how the team will address it. */
+  name: PeerName,
+  /** Agent preset to launch, e.g. 'claude'. Omitted runs the user's default shell. */
+  agent: z.string().min(1).max(64).optional(),
+  /** Shell command to run instead of an agent. */
+  command: z.string().min(1).max(4_000).optional(),
+  /** First prompt handed to the launched agent. */
+  prompt: z.string().min(1).max(100_000).optional(),
+  /** Working directory; defaults to the session's worktree. */
+  cwd: z.string().min(1).max(4_096).optional(),
+  /** Floor name to place the recruit on; defaults to the caller's floor. */
+  floor: PeerName.optional()
+})
+
+export const AgentCanvasNotifyParams = z.object({
+  message: z.string().min(1).max(1_000),
+  title: z.string().min(1).max(200).optional()
+})

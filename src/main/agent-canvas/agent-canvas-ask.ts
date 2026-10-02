@@ -109,3 +109,43 @@ function resolveCallerLabel(snapshot: AgentCanvasSnapshot, callerSessionId: stri
   }
   return callerSessionId
 }
+
+export const DEFAULT_CHECK_LINES = 60
+
+export type AgentCanvasCheckResult = {
+  peer: { sessionId: string; label: string; handle: string }
+  /** The peer's current screen, escapes stripped, oldest line first. */
+  output: string
+  lines: number
+}
+
+/**
+ * Reads what a wired peer is showing right now, without sending it anything.
+ * This is the counterpart to `ask`: use it to see whether the work you
+ * delegated has finished, instead of interrupting the agent with a message.
+ */
+export async function readConnectedPeer(input: {
+  snapshot: AgentCanvasSnapshot
+  runtime: AgentCanvasAskRuntime
+  callerSessionId: string
+  target: string
+  lines?: number
+}): Promise<AgentCanvasCheckResult> {
+  const peer = resolveConnectedPeer(input.snapshot, input.callerSessionId, input.target)
+  const { terminals } = await input.runtime.listTerminals()
+  const terminal = terminals.find((candidate) => candidate.tabId === peer.sessionId)
+  if (!terminal) {
+    throw new AgentCanvasAccessError(
+      'canvas_peer_not_running',
+      `"${peer.label}" is on the canvas but its terminal is not running.`
+    )
+  }
+  const read = await input.runtime.readTerminal(terminal.handle, {
+    limit: input.lines ?? DEFAULT_CHECK_LINES
+  })
+  return {
+    peer: { sessionId: peer.sessionId, label: peer.label, handle: terminal.handle },
+    output: read.tail.join('\n').trimEnd(),
+    lines: read.tail.length
+  }
+}

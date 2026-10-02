@@ -138,7 +138,15 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
   },
   {
     name: 'canvas',
-    keys: ['canvas peers', 'canvas ask', 'canvas note read', 'canvas note write'],
+    keys: [
+      'canvas peers',
+      'canvas ask',
+      'canvas check',
+      'canvas recruit',
+      'canvas notify',
+      'canvas note read',
+      'canvas note write'
+    ],
     load: async () => (await import('./handlers/canvas.js')).CANVAS_HANDLERS
   },
   {

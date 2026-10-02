@@ -1,16 +1,25 @@
 import { defineMethod } from '../core'
 import {
   AgentCanvasAskParams,
+  AgentCanvasCheckParams,
   AgentCanvasGetParams,
   AgentCanvasNoteReadParams,
   AgentCanvasNoteWriteParams,
+  AgentCanvasNotifyParams,
   AgentCanvasPeersParams,
+  AgentCanvasRecruitParams,
   AgentCanvasSaveParams
 } from '../../../../shared/rpc-contract/agent-canvas-params'
 import {
   askConnectedPeer,
+  readConnectedPeer,
   type AgentCanvasAskRuntime
 } from '../../../agent-canvas/agent-canvas-ask'
+import {
+  recruitAgent,
+  type AgentCanvasRecruitRuntime
+} from '../../../agent-canvas/agent-canvas-recruit'
+import { notifyUser } from '../../../agent-canvas/agent-canvas-notify'
 import {
   ensureCallerPlaced,
   getAgentCanvasStore,
@@ -83,6 +92,58 @@ export const AGENT_CANVAS_METHODS = [
         ...(signal ? { signal } : {})
       })
     }
+  }),
+  defineMethod({
+    name: 'canvas.check',
+    params: AgentCanvasCheckParams,
+    handler: async (params, { runtime }) => {
+      const { caller, snapshot } = await callerOf(runtime, params)
+      return readConnectedPeer({
+        snapshot,
+        runtime: runtime as unknown as AgentCanvasAskRuntime,
+        callerSessionId: caller,
+        target: params.to,
+        ...(params.lines === undefined ? {} : { lines: params.lines })
+      })
+    }
+  }),
+  defineMethod({
+    name: 'canvas.recruit',
+    params: AgentCanvasRecruitParams,
+    handler: async (params, { runtime, signal }) => {
+      const session = await resolveCaller(params, () => runtime.listTerminals())
+      const snapshot = ensureCallerPlaced(getAgentCanvasStore(), session)
+      const result = await recruitAgent({
+        snapshot,
+        runtime: runtime as unknown as AgentCanvasRecruitRuntime,
+        callerSessionId: session.sessionId,
+        callerWorktreeId: session.worktreeId,
+        name: params.name,
+        ...(params.agent === undefined ? {} : { agent: params.agent }),
+        ...(params.command === undefined ? {} : { command: params.command }),
+        ...(params.prompt === undefined ? {} : { prompt: params.prompt }),
+        ...(params.cwd === undefined ? {} : { cwd: params.cwd }),
+        ...(params.floor === undefined ? {} : { floor: params.floor }),
+        ...(signal ? { signal } : {})
+      })
+      // Why one store update for the card and its wire: a card without the connection
+      // would be an agent the team can see and never ask anything.
+      const saved = getAgentCanvasStore().update((current) => ({
+        ...current,
+        document: result.document
+      }))
+      return {
+        session: { sessionId: result.sessionId, label: result.label, handle: result.handle },
+        floor: result.levelId,
+        bridged: result.bridged,
+        revision: saved.revision
+      }
+    }
+  }),
+  defineMethod({
+    name: 'canvas.notify',
+    params: AgentCanvasNotifyParams,
+    handler: (params) => notifyUser(params.message, params.title)
   }),
   defineMethod({
     name: 'canvas.noteRead',
