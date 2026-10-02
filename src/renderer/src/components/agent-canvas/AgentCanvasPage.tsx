@@ -47,6 +47,7 @@ import { AgentCanvasHeader } from './AgentCanvasHeader'
 import { AgentCanvasLevelBar } from './AgentCanvasLevelBar'
 import { AgentCanvasNodeCard } from './AgentCanvasNodeCard'
 import { AgentCanvasPortalBody } from './AgentCanvasPortalBody'
+import { setCanvasNodesBlurred } from './agent-canvas-node-actions'
 import { AgentCanvasPromptDialog } from './AgentCanvasPromptDialog'
 import { openCanvasPrompt } from './agent-canvas-prompt'
 import { AgentCanvasRopes } from './AgentCanvasRopes'
@@ -327,6 +328,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
                   onOpen={openNode}
                   onRemove={(target) => removeCanvasNode(target.id)}
                   liveSlotRef={liveSlotFor(node)}
+                  onReveal={(revealed) => setCanvasNodesBlurred([revealed.id], false)}
                   headerActions={
                     node.content.kind === 'session' ? (
                       <AgentCanvasBridgeMenu document={document} node={node} />

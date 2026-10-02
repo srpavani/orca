@@ -20,6 +20,8 @@ export type CanvasClipboardEntry = {
   content: CanvasNodeContent
   width: number
   height: number
+  /** A blurred card pastes blurred: copying must not be a way to reveal it. */
+  redacted?: true
 }
 
 /** What `Copy` puts aside, with the bodies the pasted cards need. */
@@ -48,7 +50,8 @@ export function copyCanvasNodes(
     entries.push({
       content: found.node.content,
       width: found.node.frame.width,
-      height: found.node.frame.height
+      height: found.node.frame.height,
+      ...(found.node.redacted === true ? { redacted: true as const } : {})
     })
     for (const bodyId of bodyIdsOf(found.node.content)) {
       if (bodyId in bodies) {
@@ -79,11 +82,12 @@ export function pasteCanvasClipboard(input: {
   const nodeIds: CanvasNodeId[] = []
   for (const entry of input.clipboard.entries) {
     const content = withFreshBodyId(entry.content, id, input.clipboard.bodies, bodies)
-    const node = createNode(
+    const created = createNode(
       content,
       { x: input.at.x, y: input.at.y, width: entry.width, height: entry.height },
       id
     )
+    const node = entry.redacted ? { ...created, redacted: true } : created
     document = mapCanvasLevel(document, input.levelId, (contents) => ({
       ...contents,
       nodes: [...contents.nodes, node]

@@ -103,6 +103,9 @@ export type CanvasPortalContent = {
   kind: 'portal'
   portalId: string
   url: string
+
+  /** The portal's own toolbar hidden, page edge to edge. Absent means shown. */
+  chromeHidden?: boolean
 }
 
 export type CanvasDrawingContent = {
@@ -128,6 +131,12 @@ export type CanvasNode = {
    * Absent means unlocked.
    */
   locked?: boolean
+  /**
+   * Blurred: the body is hidden behind a placeholder until the user reveals it
+   * — the reference's Blur, for a terminal or note showing something private.
+   * Absent means shown.
+   */
+  redacted?: boolean
   content: CanvasNodeContent
 }
 

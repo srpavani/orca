@@ -18,8 +18,13 @@ import {
   sendCanvasNodeToBack,
   setCanvasNodeLocked,
   tidyCanvasNodes,
+  bodyIdsOfNode,
   type CanvasAlign
 } from '../../../../shared/spatial-canvas/node-ops'
+import {
+  setCanvasNodesRedacted,
+  toggleCanvasPortalFlag
+} from '../../../../shared/spatial-canvas/node-display'
 import {
   copyCanvasNodes,
   pasteCanvasClipboard,
@@ -164,4 +169,37 @@ export function arrangeCanvasNodes(nodeIds: readonly CanvasNodeId[], align?: Can
   updateDocument((document) =>
     align ? alignCanvasNodes(document, nodeIds, align) : tidyCanvasNodes(document, nodeIds)
   )
+}
+
+/** Blurs or reveals the targeted cards (the reference applies it to the selection). */
+export function setCanvasNodesBlurred(nodeIds: readonly CanvasNodeId[], blurred: boolean): void {
+  updateDocument((document) => setCanvasNodesRedacted(document, nodeIds, blurred))
+}
+
+/** Shows or hides a portal's own toolbar. */
+export function toggleCanvasPortalChrome(nodeId: CanvasNodeId): void {
+  updateDocument((document) => toggleCanvasPortalFlag(document, nodeId, 'chromeHidden'))
+}
+
+/**
+ * Copies a note or text block's body to the system clipboard — the reference's
+ * Copy contents, which is about the words, not the card.
+ */
+export function copyCanvasNodeContents(nodeId: CanvasNodeId): boolean {
+  const { document, notes } = getAgentCanvasState()
+  const node = findCanvasNode(document, nodeId)?.node
+  const bodyId = node ? bodyIdsOfNode(node)[0] : undefined
+  const text = bodyId === undefined ? '' : (notes[bodyId] ?? '')
+  if (text.trim().length === 0) {
+    return false
+  }
+  void window.api.ui.writeClipboardText(text)
+  return true
+}
+
+export function canvasNodeHasContents(nodeId: CanvasNodeId): boolean {
+  const { document, notes } = getAgentCanvasState()
+  const node = findCanvasNode(document, nodeId)?.node
+  const bodyId = node ? bodyIdsOfNode(node)[0] : undefined
+  return bodyId !== undefined && (notes[bodyId] ?? '').trim().length > 0
 }

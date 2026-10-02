@@ -32,29 +32,31 @@ export function AgentCanvasPortalBody(props: {
         className="size-full border-0 bg-background"
         style={{ pointerEvents: interactive ? 'auto' : 'none' }}
       />
-      <div className="absolute right-1 top-1 flex gap-1 opacity-70 hover:opacity-100">
-        <button
-          type="button"
-          className="rounded bg-muted p-1 text-muted-foreground hover:text-foreground"
-          aria-label={translate('auto.components.agentCanvas.portalReload', 'Reload page')}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => setReloadKey((value) => value + 1)}
-        >
-          <RotateCw className="size-3" />
-        </button>
-        <button
-          type="button"
-          className="rounded bg-muted p-1 text-muted-foreground hover:text-foreground"
-          aria-label={translate(
-            'auto.components.agentCanvas.portalOpenExternal',
-            'Open in browser'
-          )}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => void window.api.shell.openUrl(node.content.url)}
-        >
-          <ExternalLink className="size-3" />
-        </button>
-      </div>
+      {node.content.chromeHidden === true ? null : (
+        <div className="absolute right-1 top-1 flex gap-1 opacity-70 hover:opacity-100">
+          <button
+            type="button"
+            className="rounded bg-muted p-1 text-muted-foreground hover:text-foreground"
+            aria-label={translate('auto.components.agentCanvas.portalReload', 'Reload page')}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={() => setReloadKey((value) => value + 1)}
+          >
+            <RotateCw className="size-3" />
+          </button>
+          <button
+            type="button"
+            className="rounded bg-muted p-1 text-muted-foreground hover:text-foreground"
+            aria-label={translate(
+              'auto.components.agentCanvas.portalOpenExternal',
+              'Open in browser'
+            )}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={() => void window.api.shell.openUrl(node.content.url)}
+          >
+            <ExternalLink className="size-3" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

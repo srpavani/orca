@@ -1,5 +1,5 @@
 import React from 'react'
-import { Globe, Lock, SquareTerminal, StickyNote, Type, X } from 'lucide-react'
+import { EyeOff, Globe, Lock, SquareTerminal, StickyNote, Type, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type {
@@ -11,6 +11,7 @@ import type {
 import { AgentCanvasCardControls } from './AgentCanvasCardControls'
 import type { CanvasSelectionPaint } from '../../../../shared/spatial-canvas/canvas-appearance'
 import type { CardAgentState } from './agent-canvas-card-status'
+import { canvasNodeRedacted } from '../../../../shared/spatial-canvas/node-display'
 import { writeCanvasNote } from './agent-canvas-store'
 import { NOTE_PAPER_CLASS, parseNoteColor } from './agent-canvas-note-paper'
 
@@ -37,6 +38,31 @@ type AgentCanvasNodeCardProps = {
   body?: React.ReactNode
   /** Extra header buttons (e.g. the bridge menu), shown before the remove button. */
   headerActions?: React.ReactNode
+  /** Clicking a blurred card's placeholder reveals it. */
+  onReveal?: (node: CanvasNode) => void
+}
+
+/**
+ * What a blurred card shows instead of its body: the reference's faint EyeOff
+ * button, which reveals the card. The body is not rendered underneath, so a
+ * live terminal stays hidden rather than merely dimmed.
+ */
+function RedactedBody(props: { onReveal: () => void }): React.JSX.Element {
+  const label = translate('auto.components.agentCanvas.removeBlur', 'Remove blur')
+  return (
+    <div className="flex size-full items-center justify-center">
+      <button
+        type="button"
+        aria-label={label}
+        title={label}
+        className="flex size-11 items-center justify-center rounded-md text-foreground/25 transition-colors hover:text-foreground/40"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={props.onReveal}
+      >
+        <EyeOff className="size-[22px]" />
+      </button>
+    </div>
+  )
 }
 
 /** Corner marks for the selection styles that use them. */
@@ -230,7 +256,9 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
         </button>
       </div>
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {props.body ? (
+        {canvasNodeRedacted(node) ? (
+          <RedactedBody onReveal={() => props.onReveal?.(node)} />
+        ) : props.body ? (
           props.body
         ) : body !== null ? (
           <textarea

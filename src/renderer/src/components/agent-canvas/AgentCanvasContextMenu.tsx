@@ -50,6 +50,7 @@ import {
   renameCanvasNodeTo,
   setCanvasNodeLock
 } from './agent-canvas-node-actions'
+import { AgentCanvasCardKindItems } from './AgentCanvasCardKindItems'
 import { CANVAS_TERMINAL_PRESETS } from './agent-canvas-create-terminal'
 import { openNewTerminalSheet } from './agent-canvas-new-terminal'
 import { openCanvasPrompt } from './agent-canvas-prompt'
@@ -267,6 +268,7 @@ function CardMenu(props: {
         <Pencil className="size-3.5" />
         {translate('auto.components.agentCanvas.rename', 'Rename')}…
       </ContextMenuItem>
+      <AgentCanvasCardKindItems node={node} targets={targets} />
       <ContextMenuSeparator />
       <ContextMenuItem onSelect={() => raiseCanvasNode(node.id, 'front')}>
         <ArrowUpToLine className="size-3.5" />

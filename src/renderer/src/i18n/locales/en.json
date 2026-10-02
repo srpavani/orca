@@ -17598,7 +17598,12 @@
             "noAgents": "No agents in this workspace to send to.",
             "failed": "Could not send to the agent."
           }
-        }
+        },
+        "removeBlur": "Remove blur",
+        "blur": "Blur",
+        "copyContents": "Copy contents",
+        "showChrome": "Show toolbar",
+        "hideChrome": "Hide toolbar"
       }
     },
     "i18n": {
