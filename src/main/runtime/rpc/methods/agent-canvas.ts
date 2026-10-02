@@ -73,7 +73,11 @@ export const AGENT_CANVAS_METHODS = [
   defineMethod({
     name: 'canvas.get',
     params: AgentCanvasGetParams,
-    handler: (params) => {
+    // Why the watch also starts here: the user turns Sonar on from the canvas UI (not from a
+    // terminal), so the renderer's own read/write must arm it too — otherwise a card could
+    // show a watching eye while nothing was actually watching.
+    handler: (params, { runtime }) => {
+      ensureSonarRunning(getAgentCanvasStore(), runtime as unknown as SonarRuntime)
       const snapshot = getAgentCanvasStore().get()
       if (params.sinceRevision !== undefined && params.sinceRevision === snapshot.revision) {
         return { unchanged: true as const, revision: snapshot.revision }
@@ -84,7 +88,10 @@ export const AGENT_CANVAS_METHODS = [
   defineMethod({
     name: 'canvas.save',
     params: AgentCanvasSaveParams,
-    handler: (params) => saveCanvasFromClient(getAgentCanvasStore(), params)
+    handler: (params, { runtime }) => {
+      ensureSonarRunning(getAgentCanvasStore(), runtime as unknown as SonarRuntime)
+      return saveCanvasFromClient(getAgentCanvasStore(), params)
+    }
   }),
   defineMethod({
     name: 'canvas.peers',
