@@ -1,4 +1,5 @@
 import React from 'react'
+import { Minus, Plus } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
@@ -35,6 +36,7 @@ import {
 import { AgentCanvasBridgeMarkers } from './AgentCanvasBridgeMarkers'
 import { AgentCanvasBridgeMenu } from './AgentCanvasBridgeMenu'
 import { AgentCanvasDrawings, isDrawingNode } from './AgentCanvasDrawings'
+import { AgentCanvasContextMenu, EMPTY_CONTEXT_TARGET } from './AgentCanvasContextMenu'
 import { AgentCanvasFloorList } from './AgentCanvasFloorList'
 import { AgentCanvasFloorStack } from './AgentCanvasFloorStack'
 import { AgentCanvasHeader } from './AgentCanvasHeader'
@@ -70,6 +72,8 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const activeLevelId = useAgentCanvas((state) => state.activeLevelId)
   const drawTool = useAgentCanvas((state) => state.drawTool)
   const floorOverview = useAgentCanvas((state) => state.floorOverview)
+  const selectedNodeIds = useAgentCanvas((state) => state.selectedNodeIds)
+  const [contextTarget, setContextTarget] = React.useState(EMPTY_CONTEXT_TARGET)
   const surfaceRef = React.useRef<HTMLDivElement | null>(null)
   const stageHeight = useStageHeight(surfaceRef)
   const prefersReducedMotion = usePrefersReducedMotion()
@@ -117,6 +121,9 @@ export default function AgentCanvasPage(): React.JSX.Element {
     [document, activeLevelId]
   )
 
+  // The live floor's name, shown at the top of the board like the reference.
+  const activeFloorName = floorStack.find((item) => item.relativePosition === 0)?.name ?? ''
+
   const surfaceCenterWorld = (): { x: number; y: number } => {
     const surface = surfaceRef.current
     const center = surface
@@ -134,7 +141,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
     setCanvasViewport(zoomAtPoint(current, nextZoomLevel(current.zoom, direction, null), center))
   }
 
-  const addPortalAtCenter = (): void => {
+  const addPortalAt = (at: { x: number; y: number }): void => {
     openCanvasPrompt({
       kind: 'text',
       title: translate('auto.components.agentCanvas.addPortal', 'Portal'),
@@ -146,7 +153,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
       placeholder: 'http://localhost:3000',
       confirmLabel: translate('auto.components.agentCanvas.pin', 'Pin'),
       onSubmit: (raw) => {
-        if (!addCanvasPortal(raw, surfaceCenterWorld())) {
+        if (!addCanvasPortal(raw, at)) {
           openCanvasPrompt({
             kind: 'notice',
             title: translate(
@@ -160,6 +167,8 @@ export default function AgentCanvasPage(): React.JSX.Element {
       }
     })
   }
+
+  const addPortalAtCenter = (): void => addPortalAt(surfaceCenterWorld())
 
   const liveSlotFor = (node: CanvasNode): ((element: HTMLElement | null) => void) | undefined => {
     if (node.content.kind !== 'session') {
@@ -221,10 +230,8 @@ export default function AgentCanvasPage(): React.JSX.Element {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <AgentCanvasHeader
-        zoom={viewport.zoom}
         onBack={closeCanvasPage}
         onAddNote={() => addCanvasNote(surfaceCenterWorld())}
-        onZoom={zoomBy}
       />
       <div
         ref={surfaceRef}
@@ -245,91 +252,135 @@ export default function AgentCanvasPage(): React.JSX.Element {
           }
         }}
       >
-        <AgentCanvasFloorStack
-          stack={floorStack}
-          live={floorOverview}
-          stageHeight={stageHeight}
-          reduceMotion={prefersReducedMotion}
+        <AgentCanvasContextMenu
+          target={contextTarget}
+          onTargetChange={setContextTarget}
+          onAddPortal={addPortalAt}
         >
-          <div
-            className={cn('absolute inset-0', floorOverview && 'pointer-events-none')}
-            style={canvasGridStyle(viewport, window.devicePixelRatio)}
+          <AgentCanvasFloorStack
+            stack={floorStack}
+            live={floorOverview}
+            stageHeight={stageHeight}
+            reduceMotion={prefersReducedMotion}
           >
-            <AgentCanvasDrawings
-              nodes={nodes}
-              viewport={viewport}
-              draft={draw.draft?.shape ?? null}
-              draftOrigin={draw.draft?.origin ?? null}
-              selectedNodeId={selectedNodeId}
-              onSelect={(target) => selectCanvasNode(target.id)}
-            />
-            <AgentCanvasRopes
-              nodes={nodes}
-              edges={floor.edges}
-              viewport={viewport}
-              pending={gestures.pendingWire}
-              onDisconnect={(edge) => disconnectCanvasEdge(edge.id)}
-            />
-            <AgentCanvasBridgeMarkers
-              document={document}
-              levelId={activeLevelId}
-              viewport={viewport}
-            />
-            {cards.map((node) => (
-              <AgentCanvasNodeCard
-                key={node.id}
-                node={node}
-                screen={worldRectToScreen(node.frame, viewport)}
-                zoom={viewport.zoom}
-                selected={node.id === selectedNodeId}
-                wiringSource={gestures.pendingWire?.fromNode.id === node.id}
-                live={node.content.kind === 'session' && liveById.has(node.content.sessionId)}
-                agentState={cardAgentState(agentStatusForNode(node, layouts, statusByPaneKey))}
-                noteBody={node.content.kind === 'note' ? (notes[node.content.noteId] ?? '') : ''}
-                onHeaderPointerDown={gestures.onHeaderPointerDown}
-                onPortPointerDown={gestures.onPortPointerDown}
+            <div
+              className={cn('absolute inset-0', floorOverview && 'pointer-events-none')}
+              style={canvasGridStyle(viewport, window.devicePixelRatio)}
+            >
+              <AgentCanvasDrawings
+                nodes={nodes}
+                viewport={viewport}
+                draft={draw.draft?.shape ?? null}
+                draftOrigin={draw.draft?.origin ?? null}
+                selectedNodeId={selectedNodeId}
                 onSelect={(target) => selectCanvasNode(target.id)}
-                onOpen={openNode}
-                onRemove={(target) => removeCanvasNode(target.id)}
-                liveSlotRef={liveSlotFor(node)}
-                headerActions={
-                  node.content.kind === 'session' ? (
-                    <AgentCanvasBridgeMenu document={document} node={node} />
-                  ) : node.content.kind === 'note' ? (
-                    <AgentCanvasNoteColorPicker nodeId={node.id} color={noteColorOf(node)} />
-                  ) : undefined
-                }
-                body={
-                  isPortalNode(node) ? (
-                    <AgentCanvasPortalBody node={node} interactive={node.id === selectedNodeId} />
-                  ) : undefined
-                }
               />
-            ))}
-            {nodes.length === 0 ? (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-                {activeLevelId === null
-                  ? translate(
-                      'auto.components.agentCanvas.empty',
-                      'Open a terminal session and it will appear here.'
-                    )
-                  : translate(
-                      'auto.components.agentCanvas.emptyFloor',
-                      'Empty floor. Shift-click this floor with a card selected to move it here.'
-                    )}
-              </div>
-            ) : null}
-          </div>
-        </AgentCanvasFloorStack>
+              <AgentCanvasRopes
+                nodes={nodes}
+                edges={floor.edges}
+                viewport={viewport}
+                pending={gestures.pendingWire}
+                onDisconnect={(edge) => disconnectCanvasEdge(edge.id)}
+              />
+              <AgentCanvasBridgeMarkers
+                document={document}
+                levelId={activeLevelId}
+                viewport={viewport}
+              />
+              {cards.map((node) => (
+                <AgentCanvasNodeCard
+                  key={node.id}
+                  node={node}
+                  screen={worldRectToScreen(node.frame, viewport)}
+                  zoom={viewport.zoom}
+                  selected={selectedNodeIds.includes(node.id)}
+                  wiringSource={gestures.pendingWire?.fromNode.id === node.id}
+                  live={node.content.kind === 'session' && liveById.has(node.content.sessionId)}
+                  agentState={cardAgentState(agentStatusForNode(node, layouts, statusByPaneKey))}
+                  noteBody={node.content.kind === 'note' ? (notes[node.content.noteId] ?? '') : ''}
+                  onHeaderPointerDown={gestures.onHeaderPointerDown}
+                  onPortPointerDown={gestures.onPortPointerDown}
+                  onSelect={(target) => selectCanvasNode(target.id)}
+                  onOpen={openNode}
+                  onRemove={(target) => removeCanvasNode(target.id)}
+                  liveSlotRef={liveSlotFor(node)}
+                  headerActions={
+                    node.content.kind === 'session' ? (
+                      <AgentCanvasBridgeMenu document={document} node={node} />
+                    ) : node.content.kind === 'note' ? (
+                      <AgentCanvasNoteColorPicker nodeId={node.id} color={noteColorOf(node)} />
+                    ) : undefined
+                  }
+                  body={
+                    isPortalNode(node) ? (
+                      <AgentCanvasPortalBody node={node} interactive={node.id === selectedNodeId} />
+                    ) : undefined
+                  }
+                />
+              ))}
+              {nodes.length === 0 ? (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+                  {activeLevelId === null
+                    ? translate(
+                        'auto.components.agentCanvas.empty',
+                        'Open a terminal session and it will appear here.'
+                      )
+                    : translate(
+                        'auto.components.agentCanvas.emptyFloor',
+                        'Empty floor. Shift-click this floor with a card selected to move it here.'
+                      )}
+                </div>
+              ) : null}
+            </div>
+          </AgentCanvasFloorStack>
+        </AgentCanvasContextMenu>
+        {/* The selection rectangle lives above the cards so the marquee reads over
+            them, and below the chrome so it never covers the toolbar. */}
+        {gestures.marquee ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute z-20 rounded-sm border border-canvas-accent bg-canvas-accent-soft"
+            style={{
+              left: gestures.marquee.x,
+              top: gestures.marquee.y,
+              width: gestures.marquee.width,
+              height: gestures.marquee.height
+            }}
+          />
+        ) : null}
         {/* Why outside the stack: the chrome must not tilt with the sheets. The
             toolbar also hides in the overview, which is what the reference does —
             the stack is a mode, and the stack's own list carries the actions. */}
         {floorOverview ? null : (
-          <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2">
+          <div className="pointer-events-none absolute left-1/2 top-2 z-20 flex -translate-x-1/2 flex-col items-center gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">{activeFloorName}</span>
             <AgentCanvasLevelBar onAddPortal={addPortalAtCenter} />
           </div>
         )}
         <AgentCanvasFloorList document={document} stageHeight={stageHeight} />
+        {/* Why in the corner rather than the header: the reference puts the zoom
+            with the floor controls, where the board is, not up with the app chrome. */}
+        <div className="canvas-glass pointer-events-auto absolute bottom-4 right-4 z-30 flex h-[34px] items-center gap-0.5 rounded-full px-1.5">
+          <button
+            type="button"
+            className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+            aria-label={translate('auto.components.agentCanvas.zoomOut', 'Zoom out')}
+            onClick={() => zoomBy(-1)}
+          >
+            <Minus className="size-3.5" />
+          </button>
+          <span className="w-10 text-center text-[10px] tabular-nums text-muted-foreground">
+            {Math.round(viewport.zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+            aria-label={translate('auto.components.agentCanvas.zoomIn', 'Zoom in')}
+            onClick={() => zoomBy(1)}
+          >
+            <Plus className="size-3.5" />
+          </button>
+        </div>
         <AgentCanvasPromptDialog />
       </div>
     </div>

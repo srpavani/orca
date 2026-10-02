@@ -17460,7 +17460,13 @@
         "pin": "Pin",
         "ok": "OK",
         "confirm": "Confirm",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "noWorkspace": "Open a workspace first — a terminal needs somewhere to run.",
+        "terminalCreateFailed": "The terminal could not be created.",
+        "boardMenu": "Board",
+        "add": "Add",
+        "newTerminal": "New terminal",
+        "selectAll": "Select all"
       }
     },
     "i18n": {

@@ -1,14 +1,12 @@
 import React from 'react'
-import { ArrowLeft, Network, StickyNote, ZoomIn, ZoomOut } from 'lucide-react'
+import { ArrowLeft, Network, StickyNote } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { translate } from '@/i18n/i18n'
 
 export function AgentCanvasHeader(props: {
-  zoom: number
   onBack: () => void
   onAddNote: () => void
-  onZoom: (direction: 1 | -1) => void
 }): React.JSX.Element {
   return (
     <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5">
@@ -34,25 +32,6 @@ export function AgentCanvasHeader(props: {
       <Button variant="outline" size="sm" onClick={props.onAddNote}>
         <StickyNote className="size-3.5" />
         {translate('auto.components.agentCanvas.addNote', 'Note')}
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => props.onZoom(-1)}
-        aria-label={translate('auto.components.agentCanvas.zoomOut', 'Zoom out')}
-      >
-        <ZoomOut className="size-4" />
-      </Button>
-      <span className="w-10 text-center text-xs tabular-nums text-muted-foreground">
-        {Math.round(props.zoom * 100)}%
-      </span>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => props.onZoom(1)}
-        aria-label={translate('auto.components.agentCanvas.zoomIn', 'Zoom in')}
-      >
-        <ZoomIn className="size-4" />
       </Button>
     </div>
   )

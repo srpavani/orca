@@ -30,6 +30,8 @@ import { syncSessionNodes, type CanvasLiveSession } from './agent-canvas-session
 
 type AgentCanvasState = Omit<AgentCanvasSnapshot, 'revision'> & {
   selectedNodeId: CanvasNodeId | null
+  /** Every selected node; a marquee fills this, and `selectedNodeId` stays the primary. */
+  selectedNodeIds: readonly CanvasNodeId[]
   /** Host revision the local copy was last reconciled with. */
   hostRevision: number
   /** Note bodies as of `hostRevision`, so a rebase can tell user edits from agent edits. */
@@ -61,6 +63,7 @@ const store = createStore<AgentCanvasState>(() => ({
   viewport: initial.viewport,
   notes: initial.notes,
   selectedNodeId: null,
+  selectedNodeIds: [],
   hostRevision: 0,
   hostNotes: {},
   loaded: false,
@@ -188,8 +191,30 @@ export function resizeCanvasNode(
   updateDocument((document) => patchNodeFrame(document, nodeId, size))
 }
 
+/** Selects exactly one node (or clears). The last node named is the primary. */
 export function selectCanvasNode(nodeId: CanvasNodeId | null): void {
-  store.setState({ selectedNodeId: nodeId })
+  store.setState({
+    selectedNodeId: nodeId,
+    selectedNodeIds: nodeId === null ? [] : [nodeId]
+  })
+}
+
+/** Replaces the selection, as a marquee does. The last id becomes the primary. */
+export function selectCanvasNodes(nodeIds: readonly CanvasNodeId[]): void {
+  store.setState({
+    selectedNodeIds: [...nodeIds],
+    selectedNodeId: nodeIds.at(-1) ?? null
+  })
+}
+
+/** Shift-click: adds or removes one node without disturbing the rest. */
+export function toggleCanvasNodeSelection(nodeId: CanvasNodeId): void {
+  store.setState(({ selectedNodeIds }) => {
+    const next = selectedNodeIds.includes(nodeId)
+      ? selectedNodeIds.filter((id) => id !== nodeId)
+      : [...selectedNodeIds, nodeId]
+    return { selectedNodeIds: next, selectedNodeId: next.at(-1) ?? null }
+  })
 }
 
 /** Returns false when the pair cannot be wired (same node, duplicate, or unsupported kinds). */
@@ -218,7 +243,8 @@ export function addCanvasNote(at: CanvasPoint, color: CanvasNoteColor = 'yellow'
   store.setState(({ document, notes, activeLevelId }) => ({
     document: addNode(document, node, activeLevelId),
     notes: { ...notes, [noteId]: '' },
-    selectedNodeId: node.id
+    selectedNodeId: node.id,
+    selectedNodeIds: [node.id]
   }))
   schedulePersist()
   return node.id
@@ -241,7 +267,7 @@ export function writeCanvasNote(noteId: string, body: string): void {
 
 /** Removing a node also drops every wire attached to it, revoking that access. */
 export function removeCanvasNode(nodeId: CanvasNodeId): void {
-  store.setState(({ document, notes, selectedNodeId }) => {
+  store.setState(({ document, notes, selectedNodeId, selectedNodeIds }) => {
     const node = [...document.root.nodes, ...document.levels.flatMap((level) => level.nodes)].find(
       (candidate) => candidate.id === nodeId
     )
@@ -252,6 +278,7 @@ export function removeCanvasNode(nodeId: CanvasNodeId): void {
     return {
       document: removeNode(document, nodeId),
       notes: nextNotes,
+      selectedNodeIds: selectedNodeIds.filter((id) => id !== nodeId),
       selectedNodeId: selectedNodeId === nodeId ? null : selectedNodeId
     }
   })
