@@ -17588,6 +17588,15 @@
             "dirtyWorktree": "This floor has uncommitted changes. They would not land, so commit them on the floor first.",
             "targetCheckedOutElsewhere": "{{branch}} is checked out in another worktree ({{path}}). Merging into it would desync that checkout, so it is not offered.",
             "groundDirty": "Ground has uncommitted changes this merge would overwrite: {{detail}}. Commit or stash them on Ground first."
+          },
+          "resolve": {
+            "title": "Resolve code conflicts",
+            "agent": "Agent",
+            "placeholder": "Add instructions (optional)",
+            "send": "Send",
+            "sending": "Sending...",
+            "noAgents": "No agents in this workspace to send to.",
+            "failed": "Could not send to the agent."
           }
         }
       }

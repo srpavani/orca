@@ -23,6 +23,7 @@ import {
   type LandingPreview
 } from './agent-canvas-landing'
 import { deleteCanvasLevel } from './agent-canvas-level-actions'
+import { AgentCanvasResolveConflicts } from './AgentCanvasResolveConflicts'
 
 const T = 'auto.components.agentCanvas.landing'
 
@@ -190,7 +191,7 @@ function LandingBody(props: { levelId: string; name: string; branch: string }): 
                 ))}
               </div>
             </div>
-            <LandingChanges preview={preview} target={target} />
+            <LandingChanges preview={preview} target={target} floorBranch={preflight.floorBranch} />
             {preflight.trackedDirty ? (
               <p className="text-destructive">
                 {translate(
@@ -248,6 +249,7 @@ function LandingBody(props: { levelId: string; name: string; branch: string }): 
 function LandingChanges(props: {
   preview: LandingPreview | null
   target: string | null
+  floorBranch: string
 }): React.JSX.Element | null {
   const { preview, target } = props
   if (target === null) {
@@ -292,12 +294,19 @@ function LandingChanges(props: {
         ))}
       </ul>
       {preview.conflicts.length > 0 ? (
-        <p className="text-destructive">
-          {translate(
-            `${T}.conflictWarning`,
-            'Code conflicts were found. Resolve them before continuing or choose another branch.'
-          )}
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-destructive">
+            {translate(
+              `${T}.conflictWarning`,
+              'Code conflicts were found. Resolve them before continuing or choose another branch.'
+            )}
+          </p>
+          <AgentCanvasResolveConflicts
+            conflictFiles={preview.conflicts}
+            sourceBranch={props.floorBranch}
+            targetBranch={target}
+          />
+        </div>
       ) : null}
     </div>
   )
