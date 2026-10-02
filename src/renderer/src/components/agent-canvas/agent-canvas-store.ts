@@ -16,48 +16,120 @@ import type {
   CanvasPoint,
   CanvasViewport
 } from '../../../../shared/spatial-canvas/types'
-import {
-  AGENT_CANVAS_STORAGE_KEY,
-  parsePersistedAgentCanvas,
-  serializeAgentCanvas,
-  type PersistedAgentCanvas
-} from './agent-canvas-persistence'
+import { emptyAgentCanvasSnapshot } from '../../../../shared/spatial-canvas/agent-canvas-snapshot'
+import type { AgentCanvasSnapshot } from '../../../../shared/spatial-canvas/agent-canvas-snapshot'
+import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
+import { pushToHost, type CanvasHostTransport } from './agent-canvas-host-sync'
 import { syncSessionNodes, type CanvasLiveSession } from './agent-canvas-sessions'
 
-type AgentCanvasState = PersistedAgentCanvas & {
+type AgentCanvasState = Omit<AgentCanvasSnapshot, 'revision'> & {
   selectedNodeId: CanvasNodeId | null
+  /** Host revision the local copy was last reconciled with. */
+  hostRevision: number
+  /** Note bodies as of `hostRevision`, so a rebase can tell user edits from agent edits. */
+  hostNotes: Record<string, string>
+  loaded: boolean
 }
 
-function readStoredCanvas(): PersistedAgentCanvas {
-  try {
-    return parsePersistedAgentCanvas(localStorage.getItem(AGENT_CANVAS_STORAGE_KEY))
-  } catch {
-    return parsePersistedAgentCanvas(null)
-  }
+const LOCAL_RUNTIME = { kind: 'local' } as const
+
+const transport: CanvasHostTransport = {
+  get: (sinceRevision) =>
+    callRuntimeRpc(
+      LOCAL_RUNTIME,
+      'canvas.get',
+      sinceRevision === undefined ? {} : { sinceRevision }
+    ),
+  save: (input) => callRuntimeRpc(LOCAL_RUNTIME, 'canvas.save', input)
 }
 
-const store = createStore<AgentCanvasState>(() => ({ ...readStoredCanvas(), selectedNodeId: null }))
+const initial = emptyAgentCanvasSnapshot()
+const store = createStore<AgentCanvasState>(() => ({
+  document: initial.document,
+  viewport: initial.viewport,
+  notes: initial.notes,
+  selectedNodeId: null,
+  hostRevision: 0,
+  hostNotes: {},
+  loaded: false
+}))
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
+let pushing = false
 
-// Why: drags emit a frame per pointer move; debouncing keeps localStorage
-// writes off the hot path while still landing within a fraction of a second.
+function adoptHost(snapshot: AgentCanvasSnapshot, keepLocalEdits: boolean): void {
+  store.setState((state) => ({
+    ...(keepLocalEdits
+      ? {}
+      : { document: snapshot.document, viewport: snapshot.viewport, notes: snapshot.notes }),
+    hostRevision: snapshot.revision,
+    hostNotes: snapshot.notes,
+    loaded: true,
+    selectedNodeId: state.selectedNodeId
+  }))
+}
+
+// Why: drags emit a frame per pointer move; debouncing keeps host writes off the hot path.
 function schedulePersist(): void {
   if (persistTimer !== null) {
     clearTimeout(persistTimer)
   }
   persistTimer = setTimeout(() => {
     persistTimer = null
-    const { document, viewport, notes } = store.getState()
-    try {
-      localStorage.setItem(
-        AGENT_CANVAS_STORAGE_KEY,
-        serializeAgentCanvas({ document, viewport, notes })
-      )
-    } catch {
-      // Storage full or unavailable: the canvas still works for this session.
-    }
+    void flushToHost()
   }, 250)
+}
+
+async function flushToHost(): Promise<void> {
+  if (pushing || !store.getState().loaded) {
+    return
+  }
+  pushing = true
+  const sent = store.getState()
+  try {
+    const saved = await pushToHost(
+      transport,
+      { document: sent.document, viewport: sent.viewport, notes: sent.notes },
+      { revision: sent.hostRevision, notes: sent.hostNotes }
+    )
+    const now = store.getState()
+    // Why: if the user kept editing while the save was in flight, keep those edits and push again.
+    const editedMeanwhile =
+      now.document !== sent.document || now.notes !== sent.notes || now.viewport !== sent.viewport
+    adoptHost(saved, editedMeanwhile)
+    if (editedMeanwhile) {
+      schedulePersist()
+    }
+  } catch {
+    // Host unreachable: local edits stay in memory and the next edit retries.
+  } finally {
+    pushing = false
+  }
+}
+
+/** Loads the host copy once, then picks up agent note writes. Returns a stop function. */
+export function startCanvasHostSync(intervalMs = 1500): () => void {
+  let stopped = false
+  const poll = async (): Promise<void> => {
+    if (stopped || pushing || persistTimer !== null) {
+      return
+    }
+    const { loaded, hostRevision } = store.getState()
+    try {
+      const result = await transport.get(loaded ? hostRevision : undefined)
+      if (!stopped && !result.unchanged && persistTimer === null && !pushing) {
+        adoptHost(result.snapshot, false)
+      }
+    } catch {
+      // Host not ready yet; the next tick retries.
+    }
+  }
+  void poll()
+  const timer = setInterval(() => void poll(), intervalMs)
+  return () => {
+    stopped = true
+    clearInterval(timer)
+  }
 }
 
 function updateDocument(update: (document: CanvasDocument) => CanvasDocument): void {
@@ -83,6 +155,10 @@ export function setCanvasViewport(viewport: CanvasViewport): void {
 }
 
 export function syncCanvasSessions(sessions: readonly CanvasLiveSession[]): void {
+  // Why: placing sessions before the host copy loads would save over the user's saved layout.
+  if (!store.getState().loaded) {
+    return
+  }
   updateDocument((document) => syncSessionNodes(document, sessions))
 }
 

@@ -3,10 +3,20 @@ import { connectNodes, createDocument } from '../../../../shared/spatial-canvas/
 import { everyEdge, everyNode } from '../../../../shared/spatial-canvas/levels'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import {
-  emptyAgentCanvas,
-  parsePersistedAgentCanvas,
-  serializeAgentCanvas
-} from './agent-canvas-persistence'
+  emptyAgentCanvasSnapshot as emptyAgentCanvas,
+  parseAgentCanvasSnapshot
+} from '../../../../shared/spatial-canvas/agent-canvas-snapshot'
+
+function parsePersistedAgentCanvas(raw: string | null) {
+  let value: unknown = null
+  try {
+    value = raw === null ? null : JSON.parse(raw)
+  } catch {
+    value = null
+  }
+  return parseAgentCanvasSnapshot(value)
+}
+const serializeAgentCanvas = (value: unknown): string => JSON.stringify(value)
 import { ropeBetween } from './agent-canvas-rope'
 import { gridSlot, liveSessionsFromTabs, syncSessionNodes } from './agent-canvas-sessions'
 

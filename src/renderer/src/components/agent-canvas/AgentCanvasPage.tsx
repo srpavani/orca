@@ -20,6 +20,7 @@ import {
   removeCanvasNode,
   selectCanvasNode,
   setCanvasViewport,
+  startCanvasHostSync,
   syncCanvasSessions,
   useAgentCanvas
 } from './agent-canvas-store'
@@ -45,9 +46,13 @@ export default function AgentCanvasPage(): React.JSX.Element {
     [liveSessions]
   )
 
+  const loaded = useAgentCanvas((state) => state.loaded)
+
+  React.useEffect(() => startCanvasHostSync(), [])
+
   React.useEffect(() => {
     syncCanvasSessions(liveSessions)
-  }, [liveSessions])
+  }, [liveSessions, loaded])
 
   const nodes = nodesInDrawOrder(document)
   const edges = everyEdge(document)

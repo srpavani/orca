@@ -137,6 +137,11 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
     load: async () => (await import('./handlers/orchestration.js')).ORCHESTRATION_HANDLERS
   },
   {
+    name: 'canvas',
+    keys: ['canvas peers', 'canvas ask', 'canvas note read', 'canvas note write'],
+    load: async () => (await import('./handlers/canvas.js')).CANVAS_HANDLERS
+  },
+  {
     name: 'emulator',
     keys: [
       'emulator list',

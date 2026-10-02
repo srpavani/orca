@@ -34,6 +34,14 @@ import {
   SelectAccountParams,
   SelectCodexAccountForTargetParams
 } from './accounts-params'
+import {
+  AgentCanvasAskParams,
+  AgentCanvasGetParams,
+  AgentCanvasNoteReadParams,
+  AgentCanvasNoteWriteParams,
+  AgentCanvasPeersParams,
+  AgentCanvasSaveParams
+} from './agent-canvas-params'
 import { PrepareCodexForWslPaneParams } from './agent-hooks-params'
 import { AgentLaunch, AgentLaunchReplay } from './agent-launch-params'
 import { CreateAgentSessionParams, EnsureAgentSessionParams } from './agent-session-params'
@@ -715,6 +723,12 @@ export const RPC_PARAMS_BY_METHOD = {
   'browser.upload': Upload,
   'browser.viewport': Viewport,
   'browser.wait': Wait,
+  'canvas.ask': AgentCanvasAskParams,
+  'canvas.get': AgentCanvasGetParams,
+  'canvas.noteRead': AgentCanvasNoteReadParams,
+  'canvas.noteWrite': AgentCanvasNoteWriteParams,
+  'canvas.peers': AgentCanvasPeersParams,
+  'canvas.save': AgentCanvasSaveParams,
   'clipboard.abortImageUpload': AbortImageUpload,
   'clipboard.appendImageUploadChunk': AppendImageUploadChunk,
   'clipboard.commitImageUpload': CommitImageUpload,
