@@ -10,6 +10,7 @@ import {
   renameCanvasLevel,
   switchCanvasLevel
 } from './agent-canvas-level-actions'
+import { openCanvasPrompt } from './agent-canvas-prompt'
 import { setCanvasViewState, useAgentCanvas } from './agent-canvas-store'
 
 /** One row of the floor list, matching the reference's 38px item. */
@@ -54,19 +55,25 @@ export function AgentCanvasFloorList(props: {
             type="button"
             className="mb-1 flex shrink-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left text-xs font-medium text-canvas-accent hover:bg-foreground/5"
             onClick={() => {
-              const name = window.prompt(
-                translate(
-                  'auto.components.agentCanvas.floorNamePrompt',
-                  'Floor name (e.g. a branch)'
+              openCanvasPrompt({
+                kind: 'text',
+                title: translate('auto.components.agentCanvas.newFloor', 'New floor'),
+                description: translate(
+                  'auto.components.agentCanvas.newFloorDescription',
+                  'Give the new floor a name and it opens right after.'
                 ),
-                translate(
+                label: translate('auto.components.agentCanvas.floorNameLabel', 'Floor name'),
+                placeholder: translate(
                   'auto.components.agentCanvas.newFloorPlaceholder',
                   'Floor {number}'
-                ).replace('{number}', String(levels.length))
-              )
-              if (name?.trim()) {
-                addCanvasLevel(name.trim())
-              }
+                ).replace('{number}', String(levels.length)),
+                confirmLabel: translate('auto.components.agentCanvas.create', 'Create'),
+                onSubmit: (name) => {
+                  if (name.length > 0) {
+                    addCanvasLevel(name)
+                  }
+                }
+              })
             }}
           >
             <Plus className="size-3.5" />
@@ -101,13 +108,22 @@ export function AgentCanvasFloorList(props: {
                       if (level.id === null) {
                         return
                       }
-                      const name = window.prompt(
-                        translate('auto.components.agentCanvas.renameFloor', 'Rename floor'),
-                        level.name
-                      )
-                      if (name?.trim()) {
-                        renameCanvasLevel(level.id as string, name.trim())
-                      }
+                      const levelId = level.id
+                      openCanvasPrompt({
+                        kind: 'text',
+                        title: translate('auto.components.agentCanvas.renameFloor', 'Rename floor'),
+                        label: translate(
+                          'auto.components.agentCanvas.floorNameLabel',
+                          'Floor name'
+                        ),
+                        initialValue: level.name,
+                        confirmLabel: translate('auto.components.agentCanvas.save', 'Save'),
+                        onSubmit: (name) => {
+                          if (name.length > 0) {
+                            renameCanvasLevel(levelId, name)
+                          }
+                        }
+                      })
                     }}
                   >
                     {label}
@@ -123,15 +139,21 @@ export function AgentCanvasFloorList(props: {
                       )}
                       onClick={(event) => {
                         event.stopPropagation()
-                        const ok = window.confirm(
-                          translate(
+                        const levelId = level.id as string
+                        openCanvasPrompt({
+                          kind: 'confirm',
+                          title: translate(
+                            'auto.components.agentCanvas.deleteFloor',
+                            'Delete floor'
+                          ),
+                          description: translate(
                             'auto.components.agentCanvas.deleteFloorConfirm',
                             'Delete this floor? Sessions on it move to the ground floor; notes, drawings and portals are removed.'
-                          )
-                        )
-                        if (ok) {
-                          deleteCanvasLevel(level.id as string)
-                        }
+                          ),
+                          confirmLabel: translate('auto.components.agentCanvas.delete', 'Delete'),
+                          destructive: true,
+                          onSubmit: () => deleteCanvasLevel(levelId)
+                        })
                       }}
                     >
                       <X className="size-3" />

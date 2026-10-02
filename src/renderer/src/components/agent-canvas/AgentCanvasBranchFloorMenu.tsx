@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { openBranchFloor } from './agent-canvas-branch-floor'
+import { openCanvasPrompt } from './agent-canvas-prompt'
 
 /**
  * "Floor from branch": pick a repo's existing worktree, or type a new branch,
@@ -61,15 +62,22 @@ export function AgentCanvasBranchFloorMenu(props: { chipClassName: string }): Re
                 ))}
               <DropdownMenuItem
                 onSelect={() => {
-                  const branch = window.prompt(
-                    translate(
+                  const repoId = repo.id
+                  openCanvasPrompt({
+                    kind: 'text',
+                    title: translate('auto.components.agentCanvas.branchFloorNew', 'New branch…'),
+                    description: translate(
                       'auto.components.agentCanvas.branchFloorPrompt',
                       'New branch name (a worktree is created for it)'
-                    )
-                  )
-                  if (branch?.trim()) {
-                    void openBranchFloor(repo.id, branch)
-                  }
+                    ),
+                    label: translate('auto.components.agentCanvas.branchNameLabel', 'Branch name'),
+                    confirmLabel: translate('auto.components.agentCanvas.create', 'Create'),
+                    onSubmit: (branch) => {
+                      if (branch.length > 0) {
+                        void openBranchFloor(repoId, branch)
+                      }
+                    }
+                  })
                 }}
               >
                 {translate('auto.components.agentCanvas.branchFloorNew', 'New branch…')}

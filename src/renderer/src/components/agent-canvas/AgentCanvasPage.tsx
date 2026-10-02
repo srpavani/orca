@@ -41,6 +41,8 @@ import { AgentCanvasHeader } from './AgentCanvasHeader'
 import { AgentCanvasLevelBar } from './AgentCanvasLevelBar'
 import { AgentCanvasNodeCard } from './AgentCanvasNodeCard'
 import { AgentCanvasPortalBody } from './AgentCanvasPortalBody'
+import { AgentCanvasPromptDialog } from './AgentCanvasPromptDialog'
+import { openCanvasPrompt } from './agent-canvas-prompt'
 import { AgentCanvasRopes } from './AgentCanvasRopes'
 import { useAgentCanvasDraw } from './use-agent-canvas-draw'
 import { useAgentCanvasGestures } from './use-agent-canvas-gestures'
@@ -133,17 +135,30 @@ export default function AgentCanvasPage(): React.JSX.Element {
   }
 
   const addPortalAtCenter = (): void => {
-    const raw = window.prompt(
-      translate(
+    openCanvasPrompt({
+      kind: 'text',
+      title: translate('auto.components.agentCanvas.addPortal', 'Portal'),
+      description: translate(
         'auto.components.agentCanvas.portalPrompt',
         'URL to pin on the canvas (e.g. localhost:3000)'
-      )
-    )
-    if (raw && !addCanvasPortal(raw, surfaceCenterWorld())) {
-      window.alert(
-        translate('auto.components.agentCanvas.portalInvalid', 'Only http(s) pages can be pinned.')
-      )
-    }
+      ),
+      label: translate('auto.components.agentCanvas.portalUrlLabel', 'Page URL'),
+      placeholder: 'http://localhost:3000',
+      confirmLabel: translate('auto.components.agentCanvas.pin', 'Pin'),
+      onSubmit: (raw) => {
+        if (!addCanvasPortal(raw, surfaceCenterWorld())) {
+          openCanvasPrompt({
+            kind: 'notice',
+            title: translate(
+              'auto.components.agentCanvas.portalInvalid',
+              'Only http(s) pages can be pinned.'
+            ),
+            confirmLabel: translate('auto.components.agentCanvas.ok', 'OK'),
+            onSubmit: () => {}
+          })
+        }
+      }
+    })
   }
 
   const liveSlotFor = (node: CanvasNode): ((element: HTMLElement | null) => void) | undefined => {
@@ -315,6 +330,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
           </div>
         )}
         <AgentCanvasFloorList document={document} stageHeight={stageHeight} />
+        <AgentCanvasPromptDialog />
       </div>
     </div>
   )
