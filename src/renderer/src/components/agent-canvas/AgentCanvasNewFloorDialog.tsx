@@ -17,6 +17,8 @@ import { useAppStore } from '@/store'
 import { isValidBranchName, slugifyBranch } from '../../../../shared/spatial-canvas/floor-isolation'
 import { addCanvasLevel } from './agent-canvas-level-actions'
 import { openBranchFloor } from './agent-canvas-branch-floor'
+import { runFloorHooks } from './agent-canvas-hook-runner'
+import { getAgentCanvasState } from './agent-canvas-store'
 import { closeNewFloorSheet, useNewFloorSheetOpen } from './agent-canvas-new-floor'
 
 type BranchMode = 'new' | 'existing'
@@ -69,6 +71,9 @@ function NewFloorBody(): React.JSX.Element {
     const ok = await openBranchFloor(repoId, effectiveBranch, floorName)
     setCreating(false)
     if (ok) {
+      // Why from here and not from openBranchFloor: that module is imported by the hook
+      // runner, so calling back into it there would make the two import each other.
+      void runFloorHooks('setup', getAgentCanvasState().activeLevelId)
       closeNewFloorSheet()
     }
   }

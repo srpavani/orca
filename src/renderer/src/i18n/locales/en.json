@@ -17498,7 +17498,21 @@
         "branchModeExisting": "Existing branch",
         "branchPlaceholderNew": "Name for the new branch",
         "branchPlaceholderExisting": "Name of the existing branch",
-        "branchInvalid": "That is not a valid Git branch name. Avoid spaces and the characters ~ ^ : ? *"
+        "branchInvalid": "That is not a valid Git branch name. Avoid spaces and the characters ~ ^ : ? *",
+        "hooksSetup": "Setup",
+        "hooksRun": "Run",
+        "hooksTeardown": "Teardown",
+        "hooksSetupHint": "Runs when a floor is created.",
+        "hooksRunHint": "Runs when a floor is opened.",
+        "hooksTeardownHint": "Runs when a floor is removed.",
+        "floorHooks": "Floor hooks",
+        "floorHooksDescription": "Shell commands run around the life of a floor, inside that floor checkout. One command per line.",
+        "hooksEnabled": "Enable floor hooks",
+        "hooksEnabledHint": "Off by default: these run shell commands on your machine.",
+        "hooksAutoSetup": "Run setup when a floor is created",
+        "hooksAutoSetupHint": "Turn this off to keep setup manual while run and teardown stay automatic.",
+        "hooksPlaceholder": "e.g. pnpm install",
+        "hooksEnvironment": "Available in every hook:"
       }
     },
     "i18n": {

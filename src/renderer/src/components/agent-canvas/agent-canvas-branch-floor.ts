@@ -8,7 +8,7 @@ import { normalizeBranch } from '../../../../shared/spatial-canvas/session-place
 import type { CanvasDocument } from '../../../../shared/spatial-canvas/types'
 import { setCanvasViewState, updateDocument } from './agent-canvas-store'
 
-type WorktreeRow = { id: string; repoId: string; branch: string; displayName: string }
+type WorktreeRow = { id: string; repoId: string; branch: string; displayName: string; path: string }
 
 /** The worktree already checked out on `branch` in `repoId`, if any. */
 export function findBranchWorktree(

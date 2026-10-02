@@ -11,6 +11,7 @@ import {
   removeNode
 } from '../../../../shared/spatial-canvas/document'
 import { levelContents, sessionNode } from '../../../../shared/spatial-canvas/levels'
+import type { WorkspaceHooks } from '../../../../shared/spatial-canvas/floor-hooks'
 import {
   gridSlot,
   syncSessionNodes,
@@ -293,6 +294,11 @@ export function addCanvasNote(at: CanvasPoint, color: CanvasNoteColor = 'yellow'
 }
 
 /** Recolours a sticky note. Paper colour is a property of the node, so it lives on the document. */
+/** Replaces the workspace's floor hooks. Hooks are shared by every floor. */
+export function setCanvasHooks(hooks: WorkspaceHooks): void {
+  updateDocument((document) => ({ ...document, hooks }))
+}
+
 /** Flips a session card's Sonar watch or its lead flag. */
 export function setCanvasSessionFlags(nodeId: CanvasNodeId, patch: SessionFlagPatch): void {
   updateDocument((document) => patchSessionFlags(document, nodeId, patch))

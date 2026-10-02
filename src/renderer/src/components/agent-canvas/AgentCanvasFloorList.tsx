@@ -1,5 +1,5 @@
 import React from 'react'
-import { Layers, Layers2, Plus, X } from 'lucide-react'
+import { Layers, Layers2, Plus, X, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { levelsOf } from '../../../../shared/spatial-canvas/levels'
@@ -11,6 +11,7 @@ import {
 } from './agent-canvas-level-actions'
 import { openCanvasPrompt } from './agent-canvas-prompt'
 import { openNewFloorSheet } from './agent-canvas-new-floor'
+import { openFloorHooksSheet } from './agent-canvas-floor-hooks-sheet'
 import { setCanvasViewState, useAgentCanvas } from './agent-canvas-store'
 
 /** One row of the floor list, matching the reference's 38px item. */
@@ -60,6 +61,14 @@ export function AgentCanvasFloorList(props: {
           >
             <Plus className="size-3.5" />
             {translate('auto.components.agentCanvas.newFloor', 'New floor')}
+          </button>
+          <button
+            type="button"
+            className="mb-1 flex shrink-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+            onClick={openFloorHooksSheet}
+          >
+            <Zap className="size-3.5" />
+            {translate('auto.components.agentCanvas.floorHooks', 'Floor hooks')}
           </button>
           <div className="scrollbar-sleek flex min-h-0 flex-col overflow-y-auto">
             {displayItems.map((level) => {

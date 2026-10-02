@@ -19,8 +19,20 @@ describe('branch floors', () => {
   it('finds the worktree already on a branch, ignoring refs/heads', () => {
     const rows = {
       repo: [
-        { id: 'w1', repoId: 'repo', branch: 'refs/heads/main', displayName: 'main' },
-        { id: 'w2', repoId: 'repo', branch: 'refs/heads/feature/x', displayName: 'x' }
+        {
+          id: 'w1',
+          repoId: 'repo',
+          branch: 'refs/heads/main',
+          displayName: 'main',
+          path: '/w/main'
+        },
+        {
+          id: 'w2',
+          repoId: 'repo',
+          branch: 'refs/heads/feature/x',
+          displayName: 'x',
+          path: '/w/x'
+        }
       ]
     }
     expect(findBranchWorktree(rows, 'repo', 'feature/x')?.id).toBe('w2')

@@ -14,6 +14,7 @@ import type {
   CanvasShape
 } from '../../../../shared/spatial-canvas/types'
 import { getAgentCanvasState, setCanvasViewState, updateDocument } from './agent-canvas-store'
+import { runFloorHooks } from './agent-canvas-hook-runner'
 
 export function addCanvasLevel(name: string, branch: string | null = null): void {
   let created: string | null = null
@@ -24,6 +25,8 @@ export function addCanvasLevel(name: string, branch: string | null = null): void
   })
   if (created !== null) {
     setCanvasViewState({ activeLevelId: created, selectedNodeId: null })
+    // Fire and forget: a hook must never block the floor from appearing.
+    void runFloorHooks('setup', created)
   }
 }
 
@@ -32,6 +35,9 @@ export function renameCanvasLevel(levelId: string, name: string): void {
 }
 
 export function deleteCanvasLevel(levelId: string): void {
+  // Why before the delete: teardown needs the floor's branch and checkout, which
+  // the document no longer has once the level is gone.
+  void runFloorHooks('teardown', levelId)
   updateDocument((document) => deleteLevel(document, levelId))
   if (getAgentCanvasState().activeLevelId === levelId) {
     setCanvasViewState({ activeLevelId: null, selectedNodeId: null })
@@ -40,6 +46,7 @@ export function deleteCanvasLevel(levelId: string): void {
 
 export function switchCanvasLevel(levelId: string | null): void {
   setCanvasViewState({ activeLevelId: levelId, selectedNodeId: null })
+  void runFloorHooks('run', levelId)
 }
 
 /** Sends the node to another floor; its wires are dropped (edges never cross floors). */

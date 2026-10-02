@@ -9,8 +9,9 @@
  * through a viewport (origin + zoom); see `./geometry.ts`.
  */
 
-export type CanvasPoint = { x: number; y: number }
+import type { WorkspaceHooks } from './floor-hooks'
 
+export type CanvasPoint = { x: number; y: number }
 export type CanvasRect = { x: number; y: number; width: number; height: number }
 
 /** origin is the world coordinate shown at screen (0, 0). */
@@ -196,4 +197,9 @@ export type CanvasDocument = {
   root: CanvasLevelContents
   levels: CanvasLevel[]
   bridges: CanvasBridge[]
+  /**
+   * Shell commands run around a floor's life, shared by every floor and executed
+   * with that floor's identity in the environment. Absent means none.
+   */
+  hooks?: WorkspaceHooks
 }
