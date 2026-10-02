@@ -17620,7 +17620,23 @@
         "addFileTree": "File tree",
         "fileTreeRefresh": "Refresh",
         "fileTreeLoading": "Loading files…",
-        "fileTreeEmpty": "This folder is empty."
+        "fileTreeEmpty": "This folder is empty.",
+        "fileOpsIllegal": "A name cannot contain \\\\ / : < > \" | ? *",
+        "fileOpsReserved": "Windows reserves this name for a device.",
+        "fileOpsFailed": "That did not work",
+        "fileOpsNewFile": "New File",
+        "fileOpsNewFolder": "New Folder",
+        "fileOpsNewFileField": "Name of the new file",
+        "fileOpsNewFolderField": "Name of the new folder",
+        "fileOpsNewFileName": "Untitled",
+        "fileOpsNewFolderName": "New Folder",
+        "fileOpsRename": "Rename",
+        "fileOpsRenameField": "New name for {{name}}",
+        "fileOpsTrashTitle": "Move to Trash?",
+        "fileOpsTrashBody": "{{name}} will be moved to the Trash. You can restore it from there.",
+        "fileOpsMoveToTrash": "Move to Trash",
+        "fileOpsCopyPath": "Copy Path",
+        "fileOpsCopyRelativePath": "Copy Relative Path"
       }
     },
     "i18n": {

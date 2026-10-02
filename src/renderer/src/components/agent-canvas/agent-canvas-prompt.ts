@@ -18,6 +18,8 @@ export type CanvasPromptRequest = {
   initialValue?: string
   confirmLabel?: string
   destructive?: boolean
+  /** For text questions: why the current answer cannot be accepted, or null when it can. */
+  validate?: (value: string) => string | null
   onSubmit: (value: string) => void
 }
 

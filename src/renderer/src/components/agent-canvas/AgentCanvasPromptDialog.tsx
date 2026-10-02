@@ -36,8 +36,11 @@ function PromptBody(props: { request: CanvasPromptRequest }): React.JSX.Element 
     inputRef.current?.select()
   }, [])
 
+  const problem = request.kind === 'text' ? (request.validate?.(value) ?? null) : null
+  const blocked = request.kind === 'text' && (value.trim().length === 0 || problem !== null)
+
   const submit = (): void => {
-    if (request.kind === 'text' && value.trim().length === 0) {
+    if (blocked) {
       return
     }
     const answer = value.trim()
@@ -81,13 +84,20 @@ function PromptBody(props: { request: CanvasPromptRequest }): React.JSX.Element 
               ref={inputRef}
               value={value}
               placeholder={request.placeholder}
+              aria-invalid={problem !== null}
+              aria-describedby={problem ? 'agent-canvas-prompt-problem' : undefined}
               onChange={(event) => setValue(event.target.value)}
             />
+            {problem ? (
+              <p id="agent-canvas-prompt-problem" className="text-xs text-destructive">
+                {problem}
+              </p>
+            ) : null}
             <DialogFooter className="mt-2">
               <Button type="button" variant="ghost" onClick={closeCanvasPrompt}>
                 {translate('auto.components.agentCanvas.cancel', 'Cancel')}
               </Button>
-              <Button type="submit" disabled={value.trim().length === 0}>
+              <Button type="submit" disabled={blocked}>
                 {confirmLabel}
               </Button>
             </DialogFooter>

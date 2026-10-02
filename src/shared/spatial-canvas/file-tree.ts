@@ -105,3 +105,34 @@ export function toggleFileTreeFolder(
     }
   })
 }
+
+/** The reference's name rules (nameProblem): what a new or renamed entry may be called. */
+const ILLEGAL_CHARACTERS = /[/\\:<>"|?*]/
+const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i
+
+export type FileNameProblem = 'empty' | 'illegal' | 'reserved'
+
+export function fileNameProblem(raw: string): FileNameProblem | null {
+  const trimmed = raw.trim()
+  if (trimmed === '') {
+    return 'empty'
+  }
+  const hasControl = [...trimmed].some((character) => (character.codePointAt(0) ?? 32) < 32)
+  if (ILLEGAL_CHARACTERS.test(trimmed) || hasControl) {
+    return 'illegal'
+  }
+  const cleaned = trimmed.replace(/[. ]+$/, '')
+  if (cleaned === '' || cleaned === '.' || cleaned === '..') {
+    return 'illegal'
+  }
+  if (WINDOWS_RESERVED.test(cleaned)) {
+    return 'reserved'
+  }
+  return null
+}
+
+/** The folder an entry sits in, relative to the root ('' at the top). */
+export function parentTreePath(path: string): string {
+  const cut = path.lastIndexOf('/')
+  return cut === -1 ? '' : path.slice(0, cut)
+}

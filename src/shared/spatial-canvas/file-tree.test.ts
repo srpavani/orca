@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { addNode, createDocument } from './document'
 import {
   createFileTreeNode,
+  fileNameProblem,
   flattenFileTree,
+  parentTreePath,
   sortFileTreeEntries,
   toggleFileTreeFolder
 } from './file-tree'
@@ -70,5 +72,30 @@ describe('toggleFileTreeFolder', () => {
     document = toggleFileTreeFolder(document, node.id, 'src')
     const closed = findCanvasNode(document, node.id)?.node.content
     expect(closed?.kind === 'fileTree' ? closed.expanded : null).toEqual([])
+  })
+})
+
+describe('fileNameProblem', () => {
+  it('accepts an ordinary name', () => {
+    expect(fileNameProblem('notes.md')).toBeNull()
+  })
+  it('rejects empty, illegal characters, dots and control characters', () => {
+    expect(fileNameProblem('   ')).toBe('empty')
+    expect(fileNameProblem('a/b')).toBe('illegal')
+    expect(fileNameProblem('what?')).toBe('illegal')
+    expect(fileNameProblem('..')).toBe('illegal')
+    expect(fileNameProblem('a\u0007b')).toBe('illegal')
+  })
+  it('rejects the device names Windows reserves, with or without an extension', () => {
+    expect(fileNameProblem('CON')).toBe('reserved')
+    expect(fileNameProblem('lpt1.txt')).toBe('reserved')
+    expect(fileNameProblem('console')).toBeNull()
+  })
+})
+
+describe('parentTreePath', () => {
+  it('finds the containing folder', () => {
+    expect(parentTreePath('src/lib/util.ts')).toBe('src/lib')
+    expect(parentTreePath('README.md')).toBe('')
   })
 })
