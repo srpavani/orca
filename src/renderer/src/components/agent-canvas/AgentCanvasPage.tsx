@@ -20,6 +20,7 @@ import {
   selectionPaint
 } from '../../../../shared/spatial-canvas/canvas-appearance'
 import { AgentCanvasAppearanceDialog } from './AgentCanvasAppearanceDialog'
+import { AgentCanvasLandingDialog } from './AgentCanvasLandingDialog'
 import { parseNoteColor } from './agent-canvas-note-paper'
 import { AgentCanvasNoteColorPicker } from './AgentCanvasNoteColorPicker'
 import { liveSessionsFromTabs } from './agent-canvas-sessions'
@@ -425,6 +426,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
         <AgentCanvasNewFloorDialog />
         <AgentCanvasFloorHooksDialog />
         <AgentCanvasAppearanceDialog />
+        <AgentCanvasLandingDialog />
       </div>
     </div>
   )

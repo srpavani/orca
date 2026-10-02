@@ -1,5 +1,5 @@
 import React from 'react'
-import { Cloud, CloudOff, Layers, Layers2, Plus, X, Zap } from 'lucide-react'
+import { Cloud, CloudOff, GitMerge, Layers, Layers2, Plus, X, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { canUnloadFloor, levelIsUnloaded } from '../../../../shared/spatial-canvas/floor-lifecycle'
@@ -14,6 +14,7 @@ import {
 import { openCanvasPrompt } from './agent-canvas-prompt'
 import { openNewFloorSheet } from './agent-canvas-new-floor'
 import { openFloorHooksSheet } from './agent-canvas-floor-hooks-sheet'
+import { openLandingSheet } from './agent-canvas-landing'
 import { setCanvasViewState, useAgentCanvas } from './agent-canvas-store'
 
 /** One row of the floor list, matching the reference's 38px item. */
@@ -135,6 +136,24 @@ export function AgentCanvasFloorList(props: {
                     ) : null}
                   </button>
                   <span className="shrink-0 text-[10px] tabular-nums opacity-60">{sessions}</span>
+                  {descriptor?.branch ? (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-full p-0.5 text-muted-foreground opacity-0 group-hover:opacity-70 hover:text-foreground hover:opacity-100"
+                      aria-label={translate('auto.components.agentCanvas.landFloor', 'Land floor')}
+                      title={translate('auto.components.agentCanvas.landFloor', 'Land floor')}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        openLandingSheet({
+                          levelId: descriptor.id,
+                          name: descriptor.name,
+                          branch: descriptor.branch ?? ''
+                        })
+                      }}
+                    >
+                      <GitMerge className="size-3" />
+                    </button>
+                  ) : null}
                   {canUnload ? (
                     <button
                       type="button"
