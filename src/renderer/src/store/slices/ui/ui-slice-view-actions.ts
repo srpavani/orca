@@ -102,6 +102,16 @@ export function createUiViewActions(set: UISliceSet, get: UISliceGet): Partial<U
       set((state) => ({
         activeView: state.previousViewBeforeMobile
       })),
+    openCanvasPage: () =>
+      set((state) => ({
+        activeView: 'canvas',
+        previousViewBeforeCanvas:
+          state.activeView === 'canvas' ? state.previousViewBeforeCanvas : state.activeView
+      })),
+    closeCanvasPage: () =>
+      set((state) => ({
+        activeView: state.previousViewBeforeCanvas
+      })),
     setNewWorkspaceDraft: (draft) => set({ newWorkspaceDraft: draft }),
     clearNewWorkspaceDraft: () => set({ newWorkspaceDraft: null })
   }

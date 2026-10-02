@@ -5509,7 +5509,8 @@
           "fee535205b": "Tasks",
           "d599269755": "Hide from sidebar",
           "artifacts": "Artifacts",
-          "skills": "Skills"
+          "skills": "Skills",
+          "agentCanvas": "Agent Canvas"
         },
         "SidebarRepositoryFilterSection": {
           "d3a9c4cea1": "Clear",
@@ -17395,6 +17396,24 @@
             "hostOnly": "Cursor sign-in details are only readable on the computer running Orca."
           }
         }
+      },
+      "agentCanvas": {
+        "addNote": "Note",
+        "back": "Back",
+        "beta": "Beta",
+        "cutWire": "Disconnect (revokes access)",
+        "empty": "Open a terminal session and it will appear here.",
+        "notePlaceholder": "Write a note for connected agents…",
+        "removeNode": "Remove from canvas",
+        "sessionGone": "Session closed",
+        "sessionHint": "Double-click to open this session",
+        "sessionLive": "Session open",
+        "subtitle": "Wire sessions together to let their agents ask each other. Cutting a wire revokes access.",
+        "title": "Agent Canvas",
+        "untitledNote": "Untitled note",
+        "wireFrom": "Drag to connect",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out"
       }
     },
     "i18n": {
