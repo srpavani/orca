@@ -37,13 +37,16 @@ import {
 import {
   AgentCanvasAskParams,
   AgentCanvasCheckParams,
+  AgentCanvasFloorCreateParams,
   AgentCanvasGetParams,
   AgentCanvasNoteReadParams,
   AgentCanvasNoteWriteParams,
   AgentCanvasNotifyParams,
   AgentCanvasPeersParams,
   AgentCanvasRecruitParams,
-  AgentCanvasSaveParams
+  AgentCanvasSaveParams,
+  AgentCanvasStatusParams,
+  AgentCanvasWatchParams
 } from './agent-canvas-params'
 import { PrepareCodexForWslPaneParams } from './agent-hooks-params'
 import { AgentLaunch, AgentLaunchReplay } from './agent-launch-params'
@@ -728,6 +731,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'browser.wait': Wait,
   'canvas.ask': AgentCanvasAskParams,
   'canvas.check': AgentCanvasCheckParams,
+  'canvas.floorCreate': AgentCanvasFloorCreateParams,
   'canvas.get': AgentCanvasGetParams,
   'canvas.noteRead': AgentCanvasNoteReadParams,
   'canvas.noteWrite': AgentCanvasNoteWriteParams,
@@ -735,6 +739,8 @@ export const RPC_PARAMS_BY_METHOD = {
   'canvas.peers': AgentCanvasPeersParams,
   'canvas.recruit': AgentCanvasRecruitParams,
   'canvas.save': AgentCanvasSaveParams,
+  'canvas.status': AgentCanvasStatusParams,
+  'canvas.watch': AgentCanvasWatchParams,
   'clipboard.abortImageUpload': AbortImageUpload,
   'clipboard.appendImageUploadChunk': AppendImageUploadChunk,
   'clipboard.commitImageUpload': CommitImageUpload,

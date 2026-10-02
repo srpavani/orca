@@ -10,7 +10,9 @@ export const AGENT_CANVAS_ERROR_CODES = [
   'canvas_note_read_only',
   'canvas_label_taken',
   'canvas_floor_not_found',
-  'canvas_recruit_failed'
+  'canvas_recruit_failed',
+  'canvas_not_lead',
+  'canvas_floor_exists'
 ] as const
 
 export type AgentCanvasErrorCode = (typeof AGENT_CANVAS_ERROR_CODES)[number]

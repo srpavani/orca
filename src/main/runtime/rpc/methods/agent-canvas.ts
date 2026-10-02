@@ -2,13 +2,16 @@ import { defineMethod } from '../core'
 import {
   AgentCanvasAskParams,
   AgentCanvasCheckParams,
+  AgentCanvasFloorCreateParams,
   AgentCanvasGetParams,
   AgentCanvasNoteReadParams,
   AgentCanvasNoteWriteParams,
   AgentCanvasNotifyParams,
   AgentCanvasPeersParams,
   AgentCanvasRecruitParams,
-  AgentCanvasSaveParams
+  AgentCanvasSaveParams,
+  AgentCanvasStatusParams,
+  AgentCanvasWatchParams
 } from '../../../../shared/rpc-contract/agent-canvas-params'
 import {
   askConnectedPeer,
@@ -22,16 +25,26 @@ import {
 import { notifyUser } from '../../../agent-canvas/agent-canvas-notify'
 import {
   ensureCallerPlaced,
+  ensureSonarRunning,
   getAgentCanvasStore,
   resolveCaller,
   saveCanvasFromClient,
   type CanvasTerminalRow
 } from '../../../agent-canvas/agent-canvas-host'
+import type { SonarRuntime } from '../../../agent-canvas/agent-canvas-sonar'
 import {
+  AgentCanvasAccessError,
+  resolveConnectedPeer,
   resolveConnectedNote,
   viewPeers,
-  writeConnectedNote
+  viewStatus,
+  writeConnectedNote,
+  type AgentCanvasTerminalSample
 } from '../../../agent-canvas/agent-canvas-peers'
+import { createLevel } from '../../../../shared/spatial-canvas/level-edits'
+import { sessionNode } from '../../../../shared/spatial-canvas/levels'
+import { findLevelByName } from '../../../../shared/spatial-canvas/recruit'
+import { patchSessionFlags } from '../../../../shared/spatial-canvas/node-flags'
 import type { AgentCanvasSnapshot } from '../../../../shared/spatial-canvas/agent-canvas-snapshot'
 
 type TerminalLister = {
@@ -48,7 +61,11 @@ async function callerOf(
   params: { callerTerminal?: string; callerTabId?: string }
 ): Promise<{ caller: string; snapshot: AgentCanvasSnapshot }> {
   const session = await resolveCaller(params, () => runtime.listTerminals())
-  const snapshot = ensureCallerPlaced(getAgentCanvasStore(), session)
+  const store = getAgentCanvasStore()
+  const snapshot = ensureCallerPlaced(store, session)
+  // Why here: every agent-facing canvas command passes through, so the watch
+  // starts the first time the canvas is actually used and never at boot.
+  ensureSonarRunning(store, runtime as unknown as SonarRuntime)
   return { caller: session.sessionId, snapshot }
 }
 
@@ -144,6 +161,81 @@ export const AGENT_CANVAS_METHODS = [
     name: 'canvas.notify',
     params: AgentCanvasNotifyParams,
     handler: (params) => notifyUser(params.message, params.title)
+  }),
+  defineMethod({
+    name: 'canvas.status',
+    params: AgentCanvasStatusParams,
+    handler: async (params, { runtime }) => {
+      const { caller, snapshot } = await callerOf(runtime, params)
+      const lister = runtime as unknown as {
+        listTerminals(): Promise<{ terminals: AgentCanvasTerminalSample[] }>
+      }
+      const { terminals } = await lister.listTerminals()
+      return { sessions: viewStatus(snapshot, caller, terminals, Date.now()) }
+    }
+  }),
+  defineMethod({
+    name: 'canvas.watch',
+    params: AgentCanvasWatchParams,
+    handler: async (params, { runtime }) => {
+      const { caller, snapshot } = await callerOf(runtime, params)
+      // Why omitting `to` means the caller's own card: an agent can mute its own
+      // notifications without needing to be told its own name.
+      const target =
+        params.to === undefined ? null : resolveConnectedPeer(snapshot, caller, params.to)
+      const targetSessionId = target?.sessionId ?? caller
+      const own = sessionNode(snapshot.document, caller)
+      const targetLabel =
+        target?.label ??
+        (own !== null && own.content.kind === 'session' ? own.content.label : caller)
+      const nodeId = sessionNode(snapshot.document, targetSessionId)?.id ?? null
+      if (nodeId === null) {
+        throw new AgentCanvasAccessError(
+          'canvas_peer_not_found',
+          `"${targetLabel}" has no card on this canvas.`
+        )
+      }
+      const saved = getAgentCanvasStore().update((current) => ({
+        ...current,
+        document: patchSessionFlags(current.document, nodeId, { watched: params.watched })
+      }))
+      return {
+        session: { sessionId: targetSessionId, label: targetLabel },
+        watched: params.watched,
+        revision: saved.revision
+      }
+    }
+  }),
+  defineMethod({
+    name: 'canvas.floorCreate',
+    params: AgentCanvasFloorCreateParams,
+    handler: async (params, { runtime }) => {
+      const { caller, snapshot } = await callerOf(runtime, params)
+      if (!viewPeers(snapshot, caller).self.isLead) {
+        throw new AgentCanvasAccessError(
+          'canvas_not_lead',
+          'Only a lead session may add floors. Ask the user to mark this session as lead on the Agent Canvas.'
+        )
+      }
+      if (findLevelByName(snapshot.document, params.name) !== undefined) {
+        throw new AgentCanvasAccessError(
+          'canvas_floor_exists',
+          `A floor named "${params.name}" already exists.`
+        )
+      }
+      const created = createLevel(snapshot.document, {
+        name: params.name,
+        ...(params.branch === undefined ? {} : { branch: params.branch })
+      })
+      const saved = getAgentCanvasStore().update((current) => ({
+        ...current,
+        document: created.document
+      }))
+      return {
+        floor: { id: created.levelId, name: params.name, branch: params.branch ?? null },
+        revision: saved.revision
+      }
+    }
   }),
   defineMethod({
     name: 'canvas.noteRead',

@@ -77,11 +77,30 @@ ORCA canvas ask --batch '{"Backend": "list the routes", "Reviewer": "review the 
 ## See what a peer is doing without interrupting it
 
 ```text
+ORCA canvas status --json
 ORCA canvas check <label> [--lines <n>] --json
 ```
 
-`check` reads the peer's current screen and sends nothing. Use it when you only need to know
-whether the work you delegated has finished — an `ask` interrupts whatever the peer is doing.
+`status` lists every session you can reach as `working`, `idle` (with how long it has been silent) or
+`terminal closed`, and costs the peers nothing — it samples their terminal output instead of sending
+them anything. Read it before asking, or before deciding to wait.
+
+`check` reads one peer's current screen. Use either to see whether the work you delegated has
+finished; an `ask` interrupts whatever that agent is doing.
+
+## Sonar: when the user hears from you
+
+The canvas watches agents and tells the user when one falls quiet — finished, or waiting on them.
+That is the eye on a card, and it is on by default. Mute your own card while you do something the
+user does not need to hear about, or re-watch a peer:
+
+```text
+ORCA canvas watch --off --json
+ORCA canvas watch <label> --json
+```
+
+Only agents are watched: a plain shell that finishes a command is not "waiting for you". When you
+want to say something specific instead, use `ORCA canvas notify "<message>"`.
 
 ## Grow the team
 
@@ -100,6 +119,19 @@ askable. Use it when the work genuinely needs a teammate that does not exist yet
   from you; without it the recruit lands on your own floor.
 - `--prompt` hands the new agent its first instruction, which is usually cheaper than recruiting
   blank and asking afterwards.
+
+## Floors, and who may change the board
+
+```text
+ORCA canvas floor create <name> [--branch <branch>] --json
+```
+
+Adds a floor. This one is gated: your session must be marked **lead** — the crown on your card —
+which only the user turns on. Without it you get `canvas_not_lead`. Tell the user what you were
+trying to do and let them decide; do not look for another way in. With `--branch`, sessions whose
+workspace is on that branch land on that floor by themselves.
+
+Creating the isolated git worktree behind a floor stays a user action in the canvas UI.
 
 ## Notify the user
 
@@ -141,3 +173,5 @@ for logs and status lines so concurrent writers do not erase each other.
 | `canvas_label_taken` | A session already has that name. | Pick another name, or ask the existing session. |
 | `canvas_floor_not_found` | No floor has that name. | Re-run `peers` and use a floor from its list. |
 | `canvas_recruit_failed` | The terminal could not be spawned or did not come up. | Report it; do not retry in a loop. |
+| `canvas_not_lead` | Adding a floor needs a lead session. | Ask the user to mark you lead; do not work around it. |
+| `canvas_floor_exists` | A floor already has that name. | Use the existing floor, or pick another name. |

@@ -1,12 +1,15 @@
 import React from 'react'
-import { Crown, Globe, StickyNote, SquareTerminal, X } from 'lucide-react'
+import { Globe, StickyNote, SquareTerminal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type {
-  CanvasNoteColor,
   CanvasNode,
-  CanvasRect
+  CanvasNoteColor,
+  CanvasRect,
+  CanvasSessionContent
 } from '../../../../shared/spatial-canvas/types'
+import { AgentCanvasCardControls } from './AgentCanvasCardControls'
+import type { CardAgentState } from './agent-canvas-card-status'
 import { writeCanvasNote } from './agent-canvas-store'
 import { NOTE_PAPER_CLASS, parseNoteColor } from './agent-canvas-note-paper'
 
@@ -17,6 +20,8 @@ type AgentCanvasNodeCardProps = {
   selected: boolean
   wiringSource: boolean
   live: boolean
+  /** The session's live agent status, as the rest of Orca reports it. */
+  agentState: CardAgentState
   noteBody: string
   onHeaderPointerDown: (event: React.PointerEvent, node: CanvasNode) => void
   onPortPointerDown: (event: React.PointerEvent, node: CanvasNode) => void
@@ -135,18 +140,11 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
         <span className="relative min-w-0 flex-1 truncate text-[11px] font-medium leading-none">
           {nodeTitle(node, noteBody)}
         </span>
-        {session?.isLead ? <Crown className="relative size-3 shrink-0 opacity-70" /> : null}
-        {isSession ? (
-          <span
-            className={cn(
-              'relative size-2 shrink-0 rounded-full',
-              live ? 'bg-status-success' : 'bg-muted-foreground/40'
-            )}
-            title={
-              live
-                ? translate('auto.components.agentCanvas.sessionLive', 'Session open')
-                : translate('auto.components.agentCanvas.sessionGone', 'Session closed')
-            }
+        {session ? (
+          <AgentCanvasCardControls
+            node={node as CanvasNode & { content: CanvasSessionContent }}
+            state={props.agentState}
+            live={live}
           />
         ) : null}
         {props.headerActions ? <span className="relative">{props.headerActions}</span> : null}

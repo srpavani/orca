@@ -1,6 +1,7 @@
 import type { CommandHandler, HandlerContext } from '../dispatch'
 import { printResult } from '../format'
 import { getOptionalPositiveIntegerFlag, getRequiredStringFlag } from '../flags'
+import { CANVAS_STATUS_HANDLERS } from './canvas-status'
 
 type SessionPeer = { sessionId: string; label: string; isLead: boolean }
 type NoteView = {
@@ -244,10 +245,12 @@ async function notify(ctx: HandlerContext): Promise<void> {
   )
 }
 
+// Sonar and board-structure verbs live in canvas-status.ts.
 export const CANVAS_HANDLERS: Record<string, CommandHandler> = {
   'canvas peers': peers,
   'canvas ask': ask,
   'canvas check': check,
+  ...CANVAS_STATUS_HANDLERS,
   'canvas recruit': recruit,
   'canvas notify': notify,
   'canvas note read': noteRead,

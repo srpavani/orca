@@ -7,9 +7,13 @@ import {
   newCanvasId,
   patchNodeFrame,
   removeEdge,
-  removeNode,
-  setNoteColor as setNoteColorInDocument
+  removeNode
 } from '../../../../shared/spatial-canvas/document'
+import {
+  patchSessionFlags,
+  setNoteColor as setNoteColorInDocument,
+  type SessionFlagPatch
+} from '../../../../shared/spatial-canvas/node-flags'
 import type {
   CanvasDocument,
   CanvasEdgeId,
@@ -218,6 +222,11 @@ export function addCanvasNote(at: CanvasPoint, color: CanvasNoteColor = 'yellow'
 }
 
 /** Recolours a sticky note. Paper colour is a property of the node, so it lives on the document. */
+/** Flips a session card's Sonar watch or its lead flag. */
+export function setCanvasSessionFlags(nodeId: CanvasNodeId, patch: SessionFlagPatch): void {
+  updateDocument((document) => patchSessionFlags(document, nodeId, patch))
+}
+
 export function setCanvasNoteColor(nodeId: CanvasNodeId, color: CanvasNoteColor): void {
   updateDocument((document) => setNoteColorInDocument(document, nodeId, color))
 }

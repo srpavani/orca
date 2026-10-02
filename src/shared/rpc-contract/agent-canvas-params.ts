@@ -77,3 +77,19 @@ export const AgentCanvasNotifyParams = z.object({
   message: z.string().min(1).max(1_000),
   title: z.string().min(1).max(200).optional()
 })
+
+/** Sonar: watch or mute a session's activity. Omitted `to` means the caller itself. */
+export const AgentCanvasWatchParams = z.object({
+  ...Caller,
+  to: PeerName.optional(),
+  watched: z.boolean()
+})
+
+export const AgentCanvasStatusParams = z.object({ ...Caller })
+
+export const AgentCanvasFloorCreateParams = z.object({
+  ...Caller,
+  name: PeerName,
+  /** Branch to pin the floor to; sessions on that branch land on it automatically. */
+  branch: z.string().min(1).max(200).optional()
+})

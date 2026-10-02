@@ -1,5 +1,10 @@
 import { everyNode, findNode, levelsOf, sessionNode } from '../../shared/spatial-canvas/levels'
 import { reachableFrom, type CanvasReach } from '../../shared/spatial-canvas/reachability'
+import {
+  sonarBoard,
+  type SonarActivityState,
+  type SonarSample
+} from '../../shared/spatial-canvas/sonar'
 import type { AgentCanvasSnapshot } from '../../shared/spatial-canvas/agent-canvas-snapshot'
 import type { CanvasNotePeer, CanvasSessionPeer } from '../../shared/spatial-canvas/reachability'
 import type { AgentCanvasErrorCode } from '../../shared/spatial-canvas/agent-canvas-error-codes'
@@ -31,13 +36,74 @@ export type AgentCanvasPeerView = {
   floors: readonly AgentCanvasFloorView[]
 }
 
+export type AgentCanvasStatusRow = {
+  sessionId: string
+  label: string
+  state: SonarActivityState
+  /** Milliseconds since this terminal last produced output; null when it never has. */
+  quietForMs: number | null
+  isLead: boolean
+  watched: boolean
+}
+
+export type AgentCanvasTerminalSample = {
+  tabId: string
+  connected: boolean
+  lastOutputAt: number | null
+  agentIdentity?: string
+}
+
+/**
+ * What the team is doing: the caller itself plus everyone it can ask. Reading
+ * this costs nothing on the peers' side — no prompt is sent — which is what
+ * makes it the right first move before asking or waiting on someone.
+ */
+export function viewStatus(
+  snapshot: AgentCanvasSnapshot,
+  callerSessionId: string,
+  terminals: readonly AgentCanvasTerminalSample[],
+  now: number
+): AgentCanvasStatusRow[] {
+  const reach = requireCaller(snapshot, callerSessionId)
+  const peers = [reach.self!, ...reach.sessions]
+  const byId = new Map(terminals.map((terminal) => [terminal.tabId, terminal]))
+  const samples: SonarSample[] = peers.map((peer) => {
+    const terminal = byId.get(peer.sessionId)
+    return {
+      sessionId: peer.sessionId,
+      label: peer.label,
+      connected: terminal?.connected ?? false,
+      // A plain shell has no turn to finish, so it never reports as waiting.
+      lastOutputAt: terminal?.agentIdentity ? terminal.lastOutputAt : null
+    }
+  })
+  const board = new Map(sonarBoard(samples, now).map((row) => [row.sessionId, row]))
+  const nodes = new Map(
+    everyNode(snapshot.document)
+      .filter((node) => node.content.kind === 'session')
+      .map((node) => [
+        node.content.kind === 'session' ? node.content.sessionId : node.id,
+        node.content
+      ])
+  )
+  return peers.map((peer) => {
+    const content = nodes.get(peer.sessionId)
+    return {
+      sessionId: peer.sessionId,
+      label: peer.label,
+      state: board.get(peer.sessionId)?.state ?? 'gone',
+      quietForMs: board.get(peer.sessionId)?.quietForMs ?? null,
+      isLead: peer.isLead,
+      watched: content?.kind === 'session' ? content.watched !== false : true
+    }
+  })
+}
+
 /** Floors as the calling agent sees them: name, branch, occupancy, and which one it is on. */
 export function viewFloors(
   document: AgentCanvasSnapshot['document'],
   caller: CanvasSessionPeer
 ): AgentCanvasFloorView[] {
-  const own = document.root.nodes.find((node) => node.id === caller.nodeId)
-  void own
   return levelsOf(document).map((level) => ({
     id: level.id,
     name: level.name,

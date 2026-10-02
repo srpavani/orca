@@ -15,6 +15,7 @@ import type {
   CanvasPortalContent
 } from '../../../../shared/spatial-canvas/types'
 import { addCanvasPortal } from './agent-canvas-level-actions'
+import { agentStatusForNode, cardAgentState } from './agent-canvas-card-status'
 import { canvasGridStyle } from './agent-canvas-grid'
 import { parseNoteColor } from './agent-canvas-note-paper'
 import { AgentCanvasNoteColorPicker } from './AgentCanvasNoteColorPicker'
@@ -62,6 +63,10 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const activeLevelId = useAgentCanvas((state) => state.activeLevelId)
   const drawTool = useAgentCanvas((state) => state.drawTool)
   const surfaceRef = React.useRef<HTMLDivElement | null>(null)
+  // Why the same source the tab bar uses: a card must not disagree with the
+  // rest of Orca about whether its agent is working.
+  const layouts = useAppStore((state) => state.terminalLayoutsByTabId)
+  const statusByPaneKey = useAppStore((state) => state.agentStatusByPaneKey)
   const gestures = useAgentCanvasGestures(surfaceRef)
   const draw = useAgentCanvasDraw(surfaceRef)
   const livePanes = useAgentCanvasLivePanes(selectedNodeId)
@@ -221,6 +226,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
             selected={node.id === selectedNodeId}
             wiringSource={gestures.pendingWire?.fromNode.id === node.id}
             live={node.content.kind === 'session' && liveById.has(node.content.sessionId)}
+            agentState={cardAgentState(agentStatusForNode(node, layouts, statusByPaneKey))}
             noteBody={node.content.kind === 'note' ? (notes[node.content.noteId] ?? '') : ''}
             onHeaderPointerDown={gestures.onHeaderPointerDown}
             onPortPointerDown={gestures.onPortPointerDown}

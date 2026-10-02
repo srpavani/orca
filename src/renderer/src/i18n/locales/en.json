@@ -17438,7 +17438,14 @@
         "bridgeJump": "Go to the other floor",
         "bridgeCut": "Cut bridge (revokes access)",
         "bridgeTo": "Bridge to another floor",
-        "noteColor": "Note colour"
+        "noteColor": "Note colour",
+        "sonarToggle": "Sonar: notify me when this agent goes quiet",
+        "leadToggle": "Lead: allow this session to manage the board",
+        "stateWorking": "Working",
+        "stateBlocked": "Waiting for you",
+        "stateWaiting": "Waiting",
+        "stateDone": "Done",
+        "stateUnknown": "No status yet"
       }
     },
     "i18n": {

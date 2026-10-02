@@ -236,7 +236,7 @@ export function connectNodes(
 }
 
 /** Applies an update to the ground level and every other level, keeping level identity. */
-function mapAllLevels(
+export function mapAllLevels(
   document: CanvasDocument,
   update: (contents: CanvasLevelContents) => CanvasLevelContents
 ): CanvasDocument {
@@ -267,27 +267,6 @@ export function setRopePoints(
     ...contents,
     edges: contents.edges.map((edge) => (edge.id === edgeId ? { ...edge, ropePoints } : edge))
   }))
-}
-
-/** Recolours a sticky note wherever it sits. Returns the same document when nothing changes. */
-export function setNoteColor(
-  document: CanvasDocument,
-  nodeId: CanvasNodeId,
-  color: CanvasNoteColor
-): CanvasDocument {
-  let changed = false
-  const update = (contents: CanvasLevelContents): CanvasLevelContents => {
-    const nodes = contents.nodes.map((node) => {
-      if (node.id !== nodeId || node.content.kind !== 'note' || node.content.color === color) {
-        return node
-      }
-      changed = true
-      return { ...node, content: { ...node.content, color } }
-    })
-    return changed ? { ...contents, nodes } : contents
-  }
-  const next = mapAllLevels(document, update)
-  return changed ? next : document
 }
 
 export function addLevel(document: CanvasDocument, level: CanvasLevel): CanvasDocument {

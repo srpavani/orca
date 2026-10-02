@@ -49,6 +49,50 @@ export const CANVAS_COMMAND_SPECS: CommandSpec[] = [
     examples: ['orca canvas check reviewer', 'orca canvas check Backend --lines 200 --json']
   },
   {
+    path: ['canvas', 'status'],
+    summary: 'See what each session you can reach is doing right now',
+    usage: 'orca canvas status [--json]',
+    allowedFlags: [...GLOBAL_FLAGS],
+    notes: [
+      IDENTITY_NOTE,
+      'Costs the peers nothing: it samples their terminal output clock, no prompt is sent.',
+      'Use it before ask — "working now" means the peer is mid-turn, "idle" means it is done or waiting.',
+      'Sessions with Sonar off are listed but marked; no notification is sent for them.'
+    ],
+    examples: ['orca canvas status', 'orca canvas status --json']
+  },
+  {
+    path: ['canvas', 'watch'],
+    summary: 'Turn Sonar on or off for a session (default: this session)',
+    usage: 'orca canvas watch [--to <name>] [--off] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'to', 'off'],
+    notes: [
+      IDENTITY_NOTE,
+      'Sonar watches a terminal and tells the user when it falls quiet — done, or waiting on them.',
+      'Watched is the default for every session card; --off mutes one (your own card unless --to names another).',
+      'Only agents are watched: a plain shell that finishes a command is not "waiting for you".'
+    ],
+    examples: ['orca canvas watch --off', 'orca canvas watch --to reviewer']
+  },
+  {
+    path: ['canvas', 'floor', 'create'],
+    summary: 'Add a floor to the canvas (lead sessions only)',
+    usage: 'orca canvas floor create <name> [--branch <branch>] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'name', 'branch'],
+    positionalArgs: ['name'],
+    notes: [
+      IDENTITY_NOTE,
+      'Requires your session to be marked lead on the canvas (the crown on your card): the manager',
+      'gate, so a peer agent cannot restructure the board on its own.',
+      'With --branch, sessions whose workspace is on that branch land on this floor automatically.',
+      'Adds a floor, not a git worktree — creating the isolated checkout stays a user action.'
+    ],
+    examples: [
+      'orca canvas floor create Experiment',
+      'orca canvas floor create "Refactor Auth" --branch refactor-auth'
+    ]
+  },
+  {
     path: ['canvas', 'recruit'],
     summary: 'Spawn a new agent terminal on the canvas, named and wired to this session',
     usage:

@@ -47,6 +47,12 @@ export type CanvasSessionContent = {
    * this label through terminal title changes; absent means follow the title.
    */
   name?: string | null
+  /**
+   * Sonar: whether this session's activity is watched and the user is told when
+   * it falls quiet. Absent means watched — the canvas exists for agents, and a
+   * card the user placed is a card they care about.
+   */
+  watched?: boolean
 }
 
 /** Sticky-note paper colours. A note keeps its colour in every theme. */

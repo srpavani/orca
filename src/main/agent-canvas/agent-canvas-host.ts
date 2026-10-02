@@ -11,6 +11,9 @@ import {
   type CanvasLiveSession
 } from '../../shared/spatial-canvas/session-placement'
 import { AgentCanvasAccessError } from './agent-canvas-peers'
+import { notifyUser } from './agent-canvas-notify'
+import { AgentCanvasSonar, type SonarRuntime } from './agent-canvas-sonar'
+import { sonarMessage } from '../../shared/spatial-canvas/sonar'
 import { AgentCanvasStore } from './agent-canvas-store'
 
 let store: AgentCanvasStore | null = null
@@ -138,4 +141,34 @@ export function ensureCallerPlaced(
     ...snapshot,
     document: syncSessionNodes(snapshot.document, [caller])
   }))
+}
+
+let sonar: AgentCanvasSonar | null = null
+
+/**
+ * Starts Sonar on first canvas use. Why lazy rather than at boot: a user who
+ * never opens the canvas pays nothing for the watch, and the canvas knows its
+ * runtime from the first RPC that drives it.
+ */
+export function ensureSonarRunning(target: AgentCanvasStore, runtime: SonarRuntime): void {
+  if (sonar !== null) {
+    return
+  }
+  sonar = new AgentCanvasSonar(target, runtime, (notification) => {
+    // Why delivered from here: the watcher decides *whether* to speak, the
+    // notification module decides how. Keeping them apart is what lets the
+    // decision be tested without Electron.
+    const text = sonarMessage(notification)
+    notifyUser(text.body, text.title)
+  })
+  sonar.start()
+}
+
+export function stopSonar(): void {
+  sonar?.stop()
+  sonar = null
+}
+
+export function getSonar(): AgentCanvasSonar | null {
+  return sonar
 }
