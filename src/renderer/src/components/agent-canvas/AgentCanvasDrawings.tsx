@@ -14,7 +14,8 @@ export function isDrawingNode(node: CanvasNode): node is DrawingNode {
   return node.content.kind === 'drawing'
 }
 
-function shapePath(
+/** Resting marks sit in the rope grey; the selected one takes the accent. */
+export function shapePath(
   shape: CanvasShape,
   origin: CanvasPoint,
   viewport: CanvasViewport
@@ -69,7 +70,7 @@ export function AgentCanvasDrawings(props: {
           markerHeight="6"
           orient="auto-start-reverse"
         >
-          <path d="M0,0 L10,5 L0,10 z" className="fill-muted-foreground" />
+          <path d="M0,0 L10,5 L0,10 z" className="fill-canvas-rope" />
         </marker>
       </defs>
       {props.nodes.filter(isDrawingNode).map((node) => (
@@ -77,13 +78,14 @@ export function AgentCanvasDrawings(props: {
           key={node.id}
           className={
             node.id === props.selectedNodeId
-              ? 'pointer-events-auto cursor-pointer stroke-primary'
-              : 'pointer-events-auto cursor-pointer stroke-muted-foreground'
+              ? 'pointer-events-auto cursor-pointer stroke-canvas-accent'
+              : 'pointer-events-auto cursor-pointer stroke-canvas-rope'
           }
           fill="none"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
           onPointerDown={(event) => {
             event.stopPropagation()
             props.onSelect(node)
@@ -94,7 +96,7 @@ export function AgentCanvasDrawings(props: {
       ))}
       {props.draft && props.draftOrigin ? (
         <g
-          className="stroke-primary"
+          className="stroke-canvas-accent"
           fill="none"
           strokeWidth={2}
           strokeDasharray="4 3"

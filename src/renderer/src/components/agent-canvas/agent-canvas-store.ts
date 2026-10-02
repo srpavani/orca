@@ -7,12 +7,14 @@ import {
   newCanvasId,
   patchNodeFrame,
   removeEdge,
-  removeNode
+  removeNode,
+  setNoteColor as setNoteColorInDocument
 } from '../../../../shared/spatial-canvas/document'
 import type {
   CanvasDocument,
   CanvasEdgeId,
   CanvasNodeId,
+  CanvasNoteColor,
   CanvasPoint,
   CanvasViewport
 } from '../../../../shared/spatial-canvas/types'
@@ -203,9 +205,9 @@ export function disconnectCanvasEdge(edgeId: CanvasEdgeId): void {
   updateDocument((document) => removeEdge(document, edgeId))
 }
 
-export function addCanvasNote(at: CanvasPoint): CanvasNodeId {
+export function addCanvasNote(at: CanvasPoint, color: CanvasNoteColor = 'yellow'): CanvasNodeId {
   const noteId = newCanvasId()
-  const node = createNoteNode({ noteId, at })
+  const node = createNoteNode({ noteId, at, color })
   store.setState(({ document, notes, activeLevelId }) => ({
     document: addNode(document, node, activeLevelId),
     notes: { ...notes, [noteId]: '' },
@@ -213,6 +215,11 @@ export function addCanvasNote(at: CanvasPoint): CanvasNodeId {
   }))
   schedulePersist()
   return node.id
+}
+
+/** Recolours a sticky note. Paper colour is a property of the node, so it lives on the document. */
+export function setCanvasNoteColor(nodeId: CanvasNodeId, color: CanvasNoteColor): void {
+  updateDocument((document) => setNoteColorInDocument(document, nodeId, color))
 }
 
 export function writeCanvasNote(noteId: string, body: string): void {

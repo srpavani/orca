@@ -44,12 +44,27 @@ export type CanvasSessionContent = {
   isLead: boolean
 }
 
+/** Sticky-note paper colours. A note keeps its colour in every theme. */
+export type CanvasNoteColor =
+  | 'yellow'
+  | 'pink'
+  | 'blue'
+  | 'green'
+  | 'orange'
+  | 'purple'
+  | 'white'
+  | 'charcoal'
+  | 'slate'
+  | 'midnight'
+
 export type CanvasNoteContent = {
   kind: 'note'
   noteId: string
   /** Pinned display name; when null the name follows the first line of the body. */
   pinnedName: string | null
   readOnly: boolean
+  /** Absent on canvases saved before notes carried paper colours; defaults to yellow. */
+  color?: CanvasNoteColor
 }
 
 export type CanvasStackContent = {

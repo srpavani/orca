@@ -9,8 +9,15 @@ import {
   zoomAtPoint
 } from '../../../../shared/spatial-canvas/geometry'
 import { levelContents } from '../../../../shared/spatial-canvas/levels'
-import type { CanvasNode, CanvasPortalContent } from '../../../../shared/spatial-canvas/types'
+import type {
+  CanvasNode,
+  CanvasNoteColor,
+  CanvasPortalContent
+} from '../../../../shared/spatial-canvas/types'
 import { addCanvasPortal } from './agent-canvas-level-actions'
+import { canvasGridStyle } from './agent-canvas-grid'
+import { parseNoteColor } from './agent-canvas-note-paper'
+import { AgentCanvasNoteColorPicker } from './AgentCanvasNoteColorPicker'
 import { liveSessionsFromTabs } from './agent-canvas-sessions'
 import {
   addCanvasNote,
@@ -37,6 +44,10 @@ import { useAgentCanvasLivePanes } from './use-agent-canvas-live-panes'
 
 function isPortalNode(node: CanvasNode): node is CanvasNode & { content: CanvasPortalContent } {
   return node.content.kind === 'portal'
+}
+
+function noteColorOf(node: CanvasNode): CanvasNoteColor {
+  return parseNoteColor(node.content.kind === 'note' ? node.content.color : undefined) ?? 'yellow'
 }
 
 export default function AgentCanvasPage(): React.JSX.Element {
@@ -160,25 +171,20 @@ export default function AgentCanvasPage(): React.JSX.Element {
   }, [closeCanvasPage])
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
+    <div className="flex h-full min-h-0 flex-col">
       <AgentCanvasHeader
         zoom={viewport.zoom}
         onBack={closeCanvasPage}
         onAddNote={() => addCanvasNote(surfaceCenterWorld())}
         onZoom={zoomBy}
       />
-      <AgentCanvasLevelBar document={document} onAddPortal={addPortalAtCenter} />
       <div
         ref={surfaceRef}
         className={cn(
-          'relative min-h-0 flex-1 touch-none overflow-hidden bg-muted/20',
+          'relative min-h-0 flex-1 touch-none overflow-hidden',
           drawTool && 'cursor-crosshair'
         )}
-        style={{
-          backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)',
-          backgroundSize: `${24 * viewport.zoom}px ${24 * viewport.zoom}px`,
-          backgroundPosition: `${-viewport.origin.x * viewport.zoom}px ${-viewport.origin.y * viewport.zoom}px`
-        }}
+        style={canvasGridStyle(viewport, window.devicePixelRatio)}
         onPointerDown={(event) => {
           if (!draw.onPointerDown(event)) {
             gestures.onSurfacePointerDown(event)
@@ -201,6 +207,11 @@ export default function AgentCanvasPage(): React.JSX.Element {
           onDisconnect={(edge) => disconnectCanvasEdge(edge.id)}
         />
         <AgentCanvasBridgeMarkers document={document} levelId={activeLevelId} viewport={viewport} />
+        {/* Why inside the surface and absolutely positioned: the toolbar is placed on the
+            board, over the graph paper, rather than contributing a row above it. */}
+        <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2">
+          <AgentCanvasLevelBar document={document} onAddPortal={addPortalAtCenter} />
+        </div>
         {cards.map((node) => (
           <AgentCanvasNodeCard
             key={node.id}
@@ -220,15 +231,13 @@ export default function AgentCanvasPage(): React.JSX.Element {
             headerActions={
               node.content.kind === 'session' ? (
                 <AgentCanvasBridgeMenu document={document} node={node} />
+              ) : node.content.kind === 'note' ? (
+                <AgentCanvasNoteColorPicker nodeId={node.id} color={noteColorOf(node)} />
               ) : undefined
             }
             body={
               isPortalNode(node) ? (
-                <AgentCanvasPortalBody
-                  node={node}
-                  zoom={viewport.zoom}
-                  interactive={node.id === selectedNodeId}
-                />
+                <AgentCanvasPortalBody node={node} interactive={node.id === selectedNodeId} />
               ) : undefined
             }
           />

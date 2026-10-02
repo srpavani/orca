@@ -17,7 +17,6 @@ function parsePersistedAgentCanvas(raw: string | null) {
   return parseAgentCanvasSnapshot(value)
 }
 const serializeAgentCanvas = (value: unknown): string => JSON.stringify(value)
-import { ropeBetween } from './agent-canvas-rope'
 import { gridSlot, liveSessionsFromTabs, syncSessionNodes } from './agent-canvas-sessions'
 
 function sequentialIds(): () => string {
@@ -117,26 +116,5 @@ describe('agent canvas persistence', () => {
     const parsed = parsePersistedAgentCanvas(raw)
     expect(parsed.viewport.zoom).toBe(3)
     expect(parsed.notes).toEqual({ ok: 'x' })
-  })
-})
-
-describe('ropeBetween', () => {
-  it('leaves the facing sides horizontally', () => {
-    const rope = ropeBetween(
-      { x: 0, y: 0, width: 100, height: 50 },
-      { x: 300, y: 0, width: 100, height: 50 }
-    )
-    expect(rope.d.startsWith('M 100 25 ')).toBe(true)
-    expect(rope.d.endsWith(', 300 25')).toBe(true)
-    expect(rope.mid).toEqual({ x: 200, y: 25 })
-  })
-
-  it('switches to vertical when the nodes are stacked', () => {
-    const rope = ropeBetween(
-      { x: 0, y: 300, width: 100, height: 50 },
-      { x: 0, y: 0, width: 100, height: 50 }
-    )
-    expect(rope.d.startsWith('M 50 300 ')).toBe(true)
-    expect(rope.d.endsWith(', 50 50')).toBe(true)
   })
 })

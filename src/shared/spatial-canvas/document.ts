@@ -11,6 +11,7 @@ import type {
   CanvasNode,
   CanvasNodeContent,
   CanvasNodeId,
+  CanvasNoteColor,
   CanvasPoint,
   CanvasRect
 } from './types'
@@ -73,6 +74,8 @@ export function createNoteNode(input: {
   at: CanvasPoint
   pinnedName?: string | null
   readOnly?: boolean
+  color?: CanvasNoteColor
+  size?: { width: number; height: number }
   id?: CanvasIdFactory
 }): CanvasNode {
   return createNode(
@@ -80,13 +83,14 @@ export function createNoteNode(input: {
       kind: 'note',
       noteId: input.noteId,
       pinnedName: input.pinnedName ?? null,
-      readOnly: input.readOnly ?? false
+      readOnly: input.readOnly ?? false,
+      ...(input.color ? { color: input.color } : {})
     },
     {
       x: input.at.x,
       y: input.at.y,
-      width: DEFAULT_NOTE_SIZE.width,
-      height: DEFAULT_NOTE_SIZE.height
+      width: input.size?.width ?? DEFAULT_NOTE_SIZE.width,
+      height: input.size?.height ?? DEFAULT_NOTE_SIZE.height
     },
     input.id
   )
@@ -263,6 +267,27 @@ export function setRopePoints(
     ...contents,
     edges: contents.edges.map((edge) => (edge.id === edgeId ? { ...edge, ropePoints } : edge))
   }))
+}
+
+/** Recolours a sticky note wherever it sits. Returns the same document when nothing changes. */
+export function setNoteColor(
+  document: CanvasDocument,
+  nodeId: CanvasNodeId,
+  color: CanvasNoteColor
+): CanvasDocument {
+  let changed = false
+  const update = (contents: CanvasLevelContents): CanvasLevelContents => {
+    const nodes = contents.nodes.map((node) => {
+      if (node.id !== nodeId || node.content.kind !== 'note' || node.content.color === color) {
+        return node
+      }
+      changed = true
+      return { ...node, content: { ...node.content, color } }
+    })
+    return changed ? { ...contents, nodes } : contents
+  }
+  const next = mapAllLevels(document, update)
+  return changed ? next : document
 }
 
 export function addLevel(document: CanvasDocument, level: CanvasLevel): CanvasDocument {

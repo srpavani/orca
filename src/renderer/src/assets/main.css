@@ -121,6 +121,38 @@
   --color-git-graph-lane-4: var(--git-graph-lane-4);
   --color-git-graph-lane-5: var(--git-graph-lane-5);
   --color-annotation-highlight: var(--annotation-highlight);
+  /* Agent Canvas: a spatial surface where each card is a real terminal, notes are paper,
+     and the wires between them are the permission graph. Values follow Maestri's canvas
+     so the two read as the same product: the surface is its own background (not the app's),
+     the grid is graph paper, wires are faint grey dashed ropes, and selection is a deeper
+     drop shadow rather than a coloured ring. */
+  --color-canvas-surface: var(--canvas-surface);
+  --color-canvas-grid-line: var(--canvas-grid-line);
+  --color-canvas-rope: var(--canvas-rope);
+  --color-canvas-accent: var(--canvas-accent);
+  --color-canvas-accent-soft: var(--canvas-accent-soft);
+  --color-canvas-glass: var(--canvas-glass);
+  --color-canvas-glass-text: var(--canvas-glass-text);
+  --color-note-yellow: var(--note-yellow);
+  --color-note-yellow-ink: var(--note-yellow-ink);
+  --color-note-pink: var(--note-pink);
+  --color-note-pink-ink: var(--note-pink-ink);
+  --color-note-blue: var(--note-blue);
+  --color-note-blue-ink: var(--note-blue-ink);
+  --color-note-green: var(--note-green);
+  --color-note-green-ink: var(--note-green-ink);
+  --color-note-orange: var(--note-orange);
+  --color-note-orange-ink: var(--note-orange-ink);
+  --color-note-purple: var(--note-purple);
+  --color-note-purple-ink: var(--note-purple-ink);
+  --color-note-paper: var(--note-paper);
+  --color-note-paper-ink: var(--note-paper-ink);
+  --color-note-charcoal: var(--note-charcoal);
+  --color-note-charcoal-ink: var(--note-charcoal-ink);
+  --color-note-slate: var(--note-slate);
+  --color-note-slate-ink: var(--note-slate-ink);
+  --color-note-midnight: var(--note-midnight);
+  --color-note-midnight-ink: var(--note-midnight-ink);
   --shadow-floating: 0 10px 24px rgb(0 0 0 / 0.18);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -258,6 +290,41 @@
      meet >=3:1 against `--card`, not only the hover/drag strong state. */
   --tab-group-split-divider: #868690;
   --tab-group-split-divider-strong: #71717a;
+  /* Maestri canvas, light: white paper surface, 8% black graph lines, a 27% black rope,
+     macOS system blue for anything the user is acting on. */
+  --canvas-surface: #fff;
+  --canvas-grid-line: rgb(0 0 0 / 0.08);
+  --canvas-rope: rgb(0 0 0 / 0.27);
+  --canvas-accent: #007aff;
+  --canvas-accent-soft: rgb(0 122 255 / 0.12);
+  --canvas-node-shadow: 0 3px 18px rgb(0 0 0 / 0.14), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+  --canvas-node-shadow-selected: 0 8px 36px rgb(0 0 0 / 0.24), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+  --canvas-floor-shadow: 0 24px 48px rgb(0 0 0 / 0.22);
+  --canvas-floor-scrim: rgb(0 0 0 / 0.3);
+  --canvas-glass: rgb(255 255 255 / 0.78);
+  --canvas-glass-highlight: rgb(255 255 255 / 0.7);
+  --canvas-glass-text: #1d1d1f;
+  --canvas-header-tint: rgb(0 0 0 / 0.06);
+  --note-yellow: #fff9c4;
+  --note-yellow-ink: #5d4037;
+  --note-pink: #f8bbd0;
+  --note-pink-ink: #880e4f;
+  --note-blue: #bbdefb;
+  --note-blue-ink: #0d47a1;
+  --note-green: #c8e6c9;
+  --note-green-ink: #1b5e20;
+  --note-orange: #ffe0b2;
+  --note-orange-ink: #e65100;
+  --note-purple: #e1bee7;
+  --note-purple-ink: #4a148c;
+  --note-paper: #fff;
+  --note-paper-ink: #333;
+  --note-charcoal: #2d2d2d;
+  --note-charcoal-ink: #fff;
+  --note-slate: #37474f;
+  --note-slate-ink: #fff;
+  --note-midnight: #1a237e;
+  --note-midnight-ink: #fff;
 }
 
 /* ── Dark Mode ───────────────────────────────────────── */
@@ -375,6 +442,42 @@
   /* Brighter than terminal defaults so the always-visible line clears 3:1 on `--card`. */
   --tab-group-split-divider: #71717a;
   --tab-group-split-divider-strong: #a1a1aa;
+  /* Maestri canvas, dark: the surface is a touch darker than the app background so cards
+     read as lit paper, and the rope inverts to white. Sticky notes keep their paper colours
+     in both themes — a note is paper, and darkening it would change what the user wrote it as. */
+  --canvas-surface: #1e1e1e;
+  --canvas-grid-line: #303030;
+  --canvas-rope: rgb(255 255 255 / 0.33);
+  --canvas-accent: #0a84ff;
+  --canvas-accent-soft: rgb(10 132 255 / 0.2);
+  --canvas-node-shadow: 0 3px 18px rgb(0 0 0 / 0.32), 0 0 0 0.5px rgb(255 255 255 / 0.08);
+  --canvas-node-shadow-selected: 0 8px 36px rgb(0 0 0 / 0.46), 0 0 0 0.5px rgb(255 255 255 / 0.08);
+  --canvas-floor-shadow: 0 24px 48px rgb(0 0 0 / 0.6);
+  --canvas-floor-scrim: rgb(0 0 0 / 0.55);
+  --canvas-glass: rgb(44 44 46 / 0.78);
+  --canvas-glass-highlight: rgb(255 255 255 / 0.14);
+  --canvas-glass-text: #f5f5f7;
+  --canvas-header-tint: rgb(255 255 255 / 0.1);
+  --note-yellow: #fff9c4;
+  --note-yellow-ink: #5d4037;
+  --note-pink: #f8bbd0;
+  --note-pink-ink: #880e4f;
+  --note-blue: #bbdefb;
+  --note-blue-ink: #0d47a1;
+  --note-green: #c8e6c9;
+  --note-green-ink: #1b5e20;
+  --note-orange: #ffe0b2;
+  --note-orange-ink: #e65100;
+  --note-purple: #e1bee7;
+  --note-purple-ink: #4a148c;
+  --note-paper: #f4f1ea;
+  --note-paper-ink: #333;
+  --note-charcoal: #2d2d2d;
+  --note-charcoal-ink: #fff;
+  --note-slate: #37474f;
+  --note-slate-ink: #fff;
+  --note-midnight: #1a237e;
+  --note-midnight-ink: #fff;
 }
 
 .plugin-security-chrome {
@@ -538,6 +641,33 @@ body:has(> [data-slot='dialog-overlay'], > [data-slot='sheet-overlay']) {
     width: 0;
     height: 0;
   }
+}
+
+/* ── Agent Canvas ───────────────────────────────────────
+   The canvas material. Maestri's chrome floats over the surface as translucent
+   panels; the graph paper reading faintly through is what makes the toolbar feel
+   placed on the board rather than bolted above it. */
+@utility canvas-glass {
+  background: var(--canvas-glass);
+  color: var(--canvas-glass-text);
+  box-shadow:
+    inset 0 0 0 0.5px var(--canvas-glass-highlight),
+    inset 0 1px 0 var(--canvas-glass-highlight),
+    0 0.5px 1.5px rgb(0 0 0 / 0.1),
+    0 6px 20px rgb(0 0 0 / 0.08);
+  backdrop-filter: blur(12px);
+}
+
+@utility canvas-node-shadow {
+  box-shadow: var(--canvas-node-shadow);
+}
+
+@utility canvas-node-shadow-selected {
+  box-shadow: var(--canvas-node-shadow-selected);
+}
+
+@utility canvas-floor-shadow {
+  box-shadow: var(--canvas-floor-shadow);
 }
 
 /* ── Sleek scrollbar (VS Code-like) ─────────────────── */

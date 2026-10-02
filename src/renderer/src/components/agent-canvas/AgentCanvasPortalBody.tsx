@@ -7,24 +7,20 @@ const HEADER_HEIGHT = 30
 
 /**
  * A live web page pinned on the canvas (docs, a dev server, a dashboard).
- * Rendered at world size and scaled like terminals so zoom never relayouts it.
- * The frame only takes pointer input while its card is selected, otherwise a
- * drag that starts over the page would be swallowed instead of panning.
+ * Sized in world units: the card scales as a whole, so zoom never relayouts the
+ * page. The frame only takes pointer input while its card is selected, otherwise
+ * a drag that starts over the page would be swallowed instead of panning.
  */
 export function AgentCanvasPortalBody(props: {
   node: CanvasNode & { content: CanvasPortalContent }
-  zoom: number
   interactive: boolean
 }): React.JSX.Element {
-  const { node, zoom, interactive } = props
+  const { node, interactive } = props
   const [reloadKey, setReloadKey] = React.useState(0)
   const width = node.frame.width
   const height = Math.max(0, node.frame.height - HEADER_HEIGHT)
   return (
-    <div
-      className="relative origin-top-left overflow-hidden bg-background"
-      style={{ width, height, transform: `scale(${zoom})` }}
-    >
+    <div className="relative overflow-hidden" style={{ width, height }}>
       <iframe
         key={reloadKey}
         title={node.content.url}

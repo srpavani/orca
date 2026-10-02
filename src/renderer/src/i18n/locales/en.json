@@ -17437,7 +17437,8 @@
         "branchFloorNew": "New branch…",
         "bridgeJump": "Go to the other floor",
         "bridgeCut": "Cut bridge (revokes access)",
-        "bridgeTo": "Bridge to another floor"
+        "bridgeTo": "Bridge to another floor",
+        "noteColor": "Note colour"
       }
     },
     "i18n": {

@@ -47,11 +47,13 @@ const TOOLS = [
   }
 ] as const
 
-const chip = 'flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-xs transition-colors'
+const chip =
+  'flex h-7 shrink-0 items-center gap-1 rounded-full border-0 px-2 text-xs transition-colors'
 
 /**
- * Floors and drawing tools. Each floor is its own plane of cards and wires
- * (wires never cross floors), mirroring one floor per branch/worktree.
+ * Floating toolbar over the canvas: floors on the left, drawing tools and
+ * portals on the right, all inside one glass pill the way Maestri's canvas
+ * chrome sits on the board instead of above it.
  */
 export function AgentCanvasLevelBar(props: {
   document: CanvasDocument
@@ -73,8 +75,8 @@ export function AgentCanvasLevelBar(props: {
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-border px-5 py-1.5">
-      <Layers className="size-3.5 shrink-0 text-muted-foreground" />
+    <div className="canvas-glass pointer-events-auto flex max-w-[calc(100%-1.5rem)] items-center gap-0.5 overflow-x-auto rounded-2xl p-1.5">
+      <Layers className="mx-1 size-3.5 shrink-0 opacity-60" />
       {levels.map((level) => {
         const active = level.id === activeLevelId
         return (
@@ -84,8 +86,8 @@ export function AgentCanvasLevelBar(props: {
             className={cn(
               chip,
               active
-                ? 'border-primary bg-primary/10 text-foreground'
-                : 'border-border text-muted-foreground hover:text-foreground'
+                ? 'bg-foreground/10 font-medium text-foreground'
+                : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
             )}
             title={
               selectedNodeId && !active
@@ -124,10 +126,7 @@ export function AgentCanvasLevelBar(props: {
       })}
       <button
         type="button"
-        className={cn(
-          chip,
-          'border-dashed border-border text-muted-foreground hover:text-foreground'
-        )}
+        className={cn(chip, 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground')}
         onClick={() => {
           const name = promptName(`Floor ${levels.length}`)
           if (name) {
@@ -142,7 +141,7 @@ export function AgentCanvasLevelBar(props: {
       {activeLevelId !== null ? (
         <button
           type="button"
-          className={cn(chip, 'border-border text-muted-foreground hover:text-destructive')}
+          className={cn(chip, 'text-muted-foreground hover:text-destructive')}
           aria-label={translate('auto.components.agentCanvas.deleteFloor', 'Delete floor')}
           onClick={() => {
             const ok = window.confirm(
@@ -159,7 +158,7 @@ export function AgentCanvasLevelBar(props: {
           <Trash2 className="size-3" />
         </button>
       ) : null}
-      <div className="mx-1 h-5 w-px shrink-0 bg-border" />
+      <div className="mx-1 h-5 w-px shrink-0 bg-foreground/15" />
       {TOOLS.map(({ tool, Icon, label }) => (
         <button
           key={tool}
@@ -170,8 +169,8 @@ export function AgentCanvasLevelBar(props: {
           className={cn(
             chip,
             drawTool === tool
-              ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-border text-muted-foreground hover:text-foreground'
+              ? 'bg-foreground/10 text-foreground'
+              : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
           )}
           onClick={() => setCanvasViewState({ drawTool: drawTool === tool ? null : tool })}
         >
@@ -180,7 +179,7 @@ export function AgentCanvasLevelBar(props: {
       ))}
       <button
         type="button"
-        className={cn(chip, 'border-border text-muted-foreground hover:text-foreground')}
+        className={cn(chip, 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground')}
         onClick={props.onAddPortal}
       >
         <Globe className="size-3.5" />

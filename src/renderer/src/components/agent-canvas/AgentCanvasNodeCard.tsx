@@ -2,8 +2,13 @@ import React from 'react'
 import { Crown, Globe, StickyNote, SquareTerminal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import type { CanvasNode, CanvasRect } from '../../../../shared/spatial-canvas/types'
+import type {
+  CanvasNoteColor,
+  CanvasNode,
+  CanvasRect
+} from '../../../../shared/spatial-canvas/types'
 import { writeCanvasNote } from './agent-canvas-store'
+import { NOTE_PAPER_CLASS, parseNoteColor } from './agent-canvas-note-paper'
 
 type AgentCanvasNodeCardProps = {
   node: CanvasNode
@@ -26,24 +31,30 @@ type AgentCanvasNodeCardProps = {
   headerActions?: React.ReactNode
 }
 
-const HEADER_HEIGHT = 30
+/** Maestri's card header is 16px at 100%; two px more here to fit the header buttons. */
+const HEADER_HEIGHT = 18
+
+function noteColor(node: CanvasNode): CanvasNoteColor {
+  return parseNoteColor(node.content.kind === 'note' ? node.content.color : undefined) ?? 'yellow'
+}
 
 /**
- * Hosts the borrowed xterm at world size and scales it with the canvas, so
- * zooming never resizes the PTY (which would reflow a running agent's TUI).
+ * Hosts the borrowed xterm. The card scales as a whole, so this box stays at
+ * world size: zooming the canvas never resizes the PTY, which would reflow a
+ * running agent's TUI mid-turn.
  */
 function LiveTerminalSlot(props: {
   node: CanvasNode
-  zoom: number
   slotRef: (element: HTMLElement | null) => void
 }): React.JSX.Element {
-  const width = props.node.frame.width
-  const height = Math.max(0, props.node.frame.height - HEADER_HEIGHT)
   return (
     <div
       data-canvas-live-pane=""
-      className="relative origin-top-left overflow-hidden bg-background"
-      style={{ width, height, transform: `scale(${props.zoom})` }}
+      className="relative shrink-0 overflow-hidden bg-editor-surface"
+      style={{
+        width: props.node.frame.width,
+        height: Math.max(0, props.node.frame.height - HEADER_HEIGHT)
+      }}
       onPointerDown={(event) => event.stopPropagation()}
       onDoubleClick={(event) => event.stopPropagation()}
     >
@@ -70,20 +81,37 @@ function nodeTitle(node: CanvasNode, noteBody: string): string {
   return node.content.kind
 }
 
+/**
+ * A canvas card. It is positioned and scaled with one transform rather than
+ * sizing each child by zoom, so text, icons and buttons keep their proportions
+ * at every zoom level — the way Maestri's nodes behave.
+ */
 export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.Element {
   const { node, screen, zoom, selected, wiringSource, live, noteBody } = props
-  const isSession = node.content.kind === 'session'
-  const isNote = node.content.kind === 'note'
+  const session = node.content.kind === 'session' ? node.content : null
+  const note = node.content.kind === 'note' ? node.content : null
+  const isSession = session !== null
+  const isNote = note !== null
   const Icon = isSession ? SquareTerminal : node.content.kind === 'portal' ? Globe : StickyNote
   return (
     <div
       data-canvas-node-id={node.id}
       className={cn(
-        'absolute flex flex-col overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm',
-        selected ? 'border-primary ring-2 ring-primary/30' : 'border-border',
-        wiringSource && 'ring-2 ring-primary'
+        'absolute flex flex-col overflow-hidden rounded-xl',
+        // Why a shadow and not a coloured ring: on a spatial canvas the selected card is the one
+        // that looks lifted off the surface. Maestri's nodes read the same way.
+        selected ? 'canvas-node-shadow-selected' : 'canvas-node-shadow',
+        isNote ? NOTE_PAPER_CLASS[noteColor(node)] : 'bg-card text-card-foreground',
+        wiringSource && 'ring-2 ring-canvas-accent'
       )}
-      style={{ left: screen.x, top: screen.y, width: screen.width, height: screen.height }}
+      style={{
+        left: 0,
+        top: 0,
+        width: node.frame.width,
+        height: node.frame.height,
+        transformOrigin: 'top left',
+        transform: `translate(${screen.x}px, ${screen.y}px) scale(${zoom})`
+      }}
       onPointerDown={(event) => {
         event.stopPropagation()
         props.onSelect(node)
@@ -91,25 +119,28 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
       onDoubleClick={() => props.onOpen(node)}
     >
       <div
-        style={{ height: HEADER_HEIGHT * zoom, minHeight: 18 }}
-        className={cn(
-          'flex shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border px-2 active:cursor-grabbing',
-          isNote ? 'bg-annotation-highlight/10' : 'bg-muted/40'
-        )}
+        data-canvas-card-header=""
+        className="relative flex shrink-0 cursor-grab items-center gap-1.5 overflow-hidden px-2 active:cursor-grabbing"
+        style={{ height: HEADER_HEIGHT }}
         onPointerDown={(event) => props.onHeaderPointerDown(event, node)}
       >
-        <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate text-xs font-medium">
+        {/* Why an overlay rather than a background on the strip: the note's paper colour has
+            to stay flat underneath, or the header and the body disagree at their seam. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{ background: 'var(--canvas-header-tint)' }}
+        />
+        <Icon className="relative size-3 shrink-0 opacity-60" />
+        <span className="relative min-w-0 flex-1 truncate text-[11px] font-medium leading-none">
           {nodeTitle(node, noteBody)}
         </span>
-        {node.content.kind === 'session' && node.content.isLead ? (
-          <Crown className="size-3.5 shrink-0 text-annotation-highlight" />
-        ) : null}
+        {session?.isLead ? <Crown className="relative size-3 shrink-0 opacity-70" /> : null}
         {isSession ? (
           <span
             className={cn(
-              'size-2 shrink-0 rounded-full',
-              live ? 'bg-workspace-status-done' : 'bg-muted-foreground/40'
+              'relative size-2 shrink-0 rounded-full',
+              live ? 'bg-status-success' : 'bg-muted-foreground/40'
             )}
             title={
               live
@@ -118,10 +149,10 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
             }
           />
         ) : null}
-        {props.headerActions}
+        {props.headerActions ? <span className="relative">{props.headerActions}</span> : null}
         <button
           type="button"
-          className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="relative shrink-0 rounded p-0.5 opacity-50 hover:bg-foreground/10 hover:opacity-100"
           aria-label={translate('auto.components.agentCanvas.removeNode', 'Remove from canvas')}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => props.onRemove(node)}
@@ -129,30 +160,29 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
           <X className="size-3" />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {props.body ? (
           props.body
-        ) : node.content.kind === 'note' ? (
+        ) : isNote ? (
           <textarea
-            className="size-full resize-none bg-transparent p-2 text-xs outline-none"
-            style={{ fontSize: Math.max(10, 12 * zoom) }}
+            className="size-full resize-none bg-transparent p-2.5 text-xs leading-relaxed outline-none placeholder:opacity-40"
             value={noteBody}
-            readOnly={node.content.readOnly}
+            readOnly={note?.readOnly ?? false}
             placeholder={translate(
               'auto.components.agentCanvas.notePlaceholder',
               'Write a note for connected agents…'
             )}
             onPointerDown={(event) => event.stopPropagation()}
             onChange={(event) => {
-              if (node.content.kind === 'note') {
-                writeCanvasNote(node.content.noteId, event.target.value)
+              if (note) {
+                writeCanvasNote(note.noteId, event.target.value)
               }
             }}
           />
         ) : isSession && live && props.liveSlotRef ? (
-          <LiveTerminalSlot node={node} zoom={zoom} slotRef={props.liveSlotRef} />
+          <LiveTerminalSlot node={node} slotRef={props.liveSlotRef} />
         ) : (
-          <div className="flex size-full items-center justify-center p-3 text-center text-xs text-muted-foreground">
+          <div className="flex size-full items-center justify-center p-3 text-center text-xs opacity-50">
             {translate(
               'auto.components.agentCanvas.sessionHint',
               'Double-click to open this session'
@@ -162,7 +192,7 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
       </div>
       <button
         type="button"
-        className="absolute -right-1.5 top-1/2 size-3 -translate-y-1/2 rounded-full border-2 border-background bg-primary opacity-70 hover:opacity-100"
+        className="absolute -right-2 top-1/2 size-4 -translate-y-1/2 rounded-full border border-canvas-rope bg-canvas-surface opacity-0 hover:opacity-100"
         aria-label={translate('auto.components.agentCanvas.wireFrom', 'Drag to connect')}
         onPointerDown={(event) => props.onPortPointerDown(event, node)}
       />
