@@ -25,6 +25,8 @@ const ITEM_HEIGHT = 38
 export function AgentCanvasFloorList(props: {
   document: CanvasDocument
   stageHeight: number
+  /** Chrome that sits beside the pill in the same corner (the zoom control). */
+  trailing?: React.ReactNode
 }): React.JSX.Element {
   const activeLevelId = useAgentCanvas((state) => state.activeLevelId)
   const overview = useAgentCanvas((state) => state.floorOverview)
@@ -165,12 +167,17 @@ export function AgentCanvasFloorList(props: {
           </div>
         </div>
       ) : null}
-      <FloorPill
-        overview={overview}
-        hasFloors={hasFloors}
-        activeName={activeName}
-        onToggle={() => setCanvasViewState({ floorOverview: !overview })}
-      />
+      {/* Why one row: the reference keeps the zoom with the floor control, and
+          two absolutely-positioned groups in the same corner would overlap. */}
+      <div className="flex items-center gap-2">
+        <FloorPill
+          overview={overview}
+          hasFloors={hasFloors}
+          activeName={activeName}
+          onToggle={() => setCanvasViewState({ floorOverview: !overview })}
+        />
+        {props.trailing}
+      </div>
     </div>
   )
 }

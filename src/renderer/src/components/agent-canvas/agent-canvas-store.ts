@@ -4,11 +4,18 @@ import {
   addNode,
   connectNodes,
   createNoteNode,
+  createSessionNode,
   newCanvasId,
   patchNodeFrame,
   removeEdge,
   removeNode
 } from '../../../../shared/spatial-canvas/document'
+import { levelContents, sessionNode } from '../../../../shared/spatial-canvas/levels'
+import {
+  gridSlot,
+  syncSessionNodes,
+  type CanvasLiveSession
+} from '../../../../shared/spatial-canvas/session-placement'
 import {
   patchSessionFlags,
   setNoteColor as setNoteColorInDocument,
@@ -17,6 +24,7 @@ import {
 import type {
   CanvasDocument,
   CanvasEdgeId,
+  CanvasLevelId,
   CanvasNodeId,
   CanvasNoteColor,
   CanvasPoint,
@@ -26,7 +34,6 @@ import { emptyAgentCanvasSnapshot } from '../../../../shared/spatial-canvas/agen
 import type { AgentCanvasSnapshot } from '../../../../shared/spatial-canvas/agent-canvas-snapshot'
 import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import { pushToHost, type CanvasHostTransport } from './agent-canvas-host-sync'
-import { syncSessionNodes, type CanvasLiveSession } from './agent-canvas-sessions'
 
 type AgentCanvasState = Omit<AgentCanvasSnapshot, 'revision'> & {
   selectedNodeId: CanvasNodeId | null
@@ -178,6 +185,33 @@ export function syncCanvasSessions(sessions: readonly CanvasLiveSession[]): void
     return
   }
   updateDocument((document) => syncSessionNodes(document, sessions))
+}
+
+/**
+ * Puts a terminal created from the board onto the floor the user is looking at.
+ * The background sync would otherwise file it on its branch's floor, which is
+ * not where the user is, so the card they just asked for never appears.
+ */
+export function placeCanvasSessionAt(
+  sessionId: string,
+  label: string,
+  levelId: CanvasLevelId
+): void {
+  if (sessionNode(store.getState().document, sessionId)) {
+    return
+  }
+  const floor = levelContents(store.getState().document, levelId) ?? store.getState().document.root
+  const node = createSessionNode({
+    sessionId,
+    label,
+    at: gridSlot(floor.nodes.filter((item) => item.content.kind === 'session').length)
+  })
+  store.setState(({ document }) => ({
+    document: addNode(document, node, levelId),
+    selectedNodeId: node.id,
+    selectedNodeIds: [node.id]
+  }))
+  schedulePersist()
 }
 
 export function moveCanvasNode(nodeId: CanvasNodeId, at: CanvasPoint): void {

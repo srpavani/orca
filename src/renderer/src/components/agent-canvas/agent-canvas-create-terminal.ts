@@ -2,6 +2,7 @@ import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { TuiAgent } from '../../../../shared/tui-agent'
+import { getAgentCanvasState, placeCanvasSessionAt } from './agent-canvas-store'
 import { openCanvasPrompt } from './agent-canvas-prompt'
 
 export type CanvasTerminalPreset = {
@@ -41,7 +42,7 @@ export async function createCanvasTerminal(preset: CanvasTerminalPreset): Promis
     return
   }
   try {
-    await callRuntimeRpc(
+    const created = await callRuntimeRpc<{ tab?: { id?: string; title?: string | null } }>(
       LOCAL_RUNTIME,
       'session.tabs.createTerminal',
       {
@@ -53,6 +54,17 @@ export async function createCanvasTerminal(preset: CanvasTerminalPreset): Promis
       // Spawning a PTY is slower than a read; leave room for it to come up.
       { timeoutMs: 60_000 }
     )
+    // Why place it here rather than let the sync file it: the sync puts a session on
+    // its branch's floor, so a terminal created while looking at another floor would
+    // land out of sight. The board asked for it; the board should show it.
+    const sessionId = created?.tab?.id
+    if (typeof sessionId === 'string') {
+      placeCanvasSessionAt(
+        sessionId,
+        created?.tab?.title?.trim() || preset.label,
+        getAgentCanvasState().activeLevelId
+      )
+    }
   } catch (error) {
     openCanvasPrompt({
       kind: 'notice',

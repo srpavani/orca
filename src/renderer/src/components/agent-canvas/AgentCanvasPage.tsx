@@ -357,30 +357,35 @@ export default function AgentCanvasPage(): React.JSX.Element {
             <AgentCanvasLevelBar onAddPortal={addPortalAtCenter} />
           </div>
         )}
-        <AgentCanvasFloorList document={document} stageHeight={stageHeight} />
-        {/* Why in the corner rather than the header: the reference puts the zoom
-            with the floor controls, where the board is, not up with the app chrome. */}
-        <div className="canvas-glass pointer-events-auto absolute bottom-4 right-4 z-30 flex h-[34px] items-center gap-0.5 rounded-full px-1.5">
-          <button
-            type="button"
-            className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-            aria-label={translate('auto.components.agentCanvas.zoomOut', 'Zoom out')}
-            onClick={() => zoomBy(-1)}
-          >
-            <Minus className="size-3.5" />
-          </button>
-          <span className="w-10 text-center text-[10px] tabular-nums text-muted-foreground">
-            {Math.round(viewport.zoom * 100)}%
-          </span>
-          <button
-            type="button"
-            className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-            aria-label={translate('auto.components.agentCanvas.zoomIn', 'Zoom in')}
-            onClick={() => zoomBy(1)}
-          >
-            <Plus className="size-3.5" />
-          </button>
-        </div>
+        <AgentCanvasFloorList
+          document={document}
+          stageHeight={stageHeight}
+          trailing={
+            // Why one row with the pill: the reference keeps the zoom beside the
+            // floor control, and two groups in the same corner would overlap.
+            <div className="canvas-glass pointer-events-auto flex h-[34px] items-center gap-0.5 rounded-full px-1.5">
+              <button
+                type="button"
+                className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+                aria-label={translate('auto.components.agentCanvas.zoomOut', 'Zoom out')}
+                onClick={() => zoomBy(-1)}
+              >
+                <Minus className="size-3.5" />
+              </button>
+              <span className="w-10 text-center text-[10px] tabular-nums text-muted-foreground">
+                {Math.round(viewport.zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+                aria-label={translate('auto.components.agentCanvas.zoomIn', 'Zoom in')}
+                onClick={() => zoomBy(1)}
+              >
+                <Plus className="size-3.5" />
+              </button>
+            </div>
+          }
+        />
         <AgentCanvasPromptDialog />
       </div>
     </div>
