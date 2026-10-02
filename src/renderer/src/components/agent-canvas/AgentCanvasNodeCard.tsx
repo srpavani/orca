@@ -1,5 +1,5 @@
 import React from 'react'
-import { EyeOff, Globe, Lock, SquareTerminal, StickyNote, Type, X } from 'lucide-react'
+import { EyeOff, FolderTree, Globe, Lock, SquareTerminal, StickyNote, Type, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type {
@@ -150,6 +150,9 @@ function nodeTitle(node: CanvasNode, noteBody: string): string {
       translate('auto.components.agentCanvas.untitledNote', 'Untitled note')
     )
   }
+  if (node.content.kind === 'fileTree') {
+    return node.content.rootName
+  }
   if (node.content.kind === 'text') {
     const firstLine = noteBody.split('\n').find((line) => line.trim().length > 0)
     return (
@@ -183,9 +186,11 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
     ? SquareTerminal
     : node.content.kind === 'portal'
       ? Globe
-      : isText
-        ? Type
-        : StickyNote
+      : node.content.kind === 'fileTree'
+        ? FolderTree
+        : isText
+          ? Type
+          : StickyNote
   return (
     <div
       data-canvas-node-id={node.id}

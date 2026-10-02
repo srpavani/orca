@@ -17616,7 +17616,11 @@
         "color": "Color",
         "groupColorNeutral": "Neutral",
         "groupRename": "Rename group",
-        "groupRenameLabel": "Group name"
+        "groupRenameLabel": "Group name",
+        "addFileTree": "File tree",
+        "fileTreeRefresh": "Refresh",
+        "fileTreeLoading": "Loading files…",
+        "fileTreeEmpty": "This folder is empty."
       }
     },
     "i18n": {

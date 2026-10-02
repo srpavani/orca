@@ -35,6 +35,7 @@ export type CanvasNodeContent =
   | CanvasTextContent
   | CanvasStackContent
   | CanvasPortalContent
+  | CanvasFileTreeContent
   | CanvasDrawingContent
   | CanvasBridgeContent
 
@@ -106,6 +107,19 @@ export type CanvasPortalContent = {
 
   /** The portal's own toolbar hidden, page edge to edge. Absent means shown. */
   chromeHidden?: boolean
+}
+
+/**
+ * A live view of a project's files, rooted in one Orca worktree — the
+ * reference's file tree node. The listing is read on demand and never stored.
+ */
+export type CanvasFileTreeContent = {
+  kind: 'fileTree'
+  worktreeId: string
+  /** Shown in the header; the worktree's folder name when the tree was placed. */
+  rootName: string
+  /** Folders the user opened, relative to the root, so the tree reopens as left. */
+  expanded?: string[]
 }
 
 export type CanvasDrawingContent = {

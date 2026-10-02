@@ -6,11 +6,8 @@ import { translate } from '@/i18n/i18n'
 import { screenToWorld, worldRectToScreen } from '../../../../shared/spatial-canvas/geometry'
 import { buildFloorStack } from '../../../../shared/spatial-canvas/floor-stack'
 import { levelContents, levelsOf } from '../../../../shared/spatial-canvas/levels'
-import type {
-  CanvasNode,
-  CanvasNoteColor,
-  CanvasPortalContent
-} from '../../../../shared/spatial-canvas/types'
+import type { CanvasNode, CanvasNoteColor } from '../../../../shared/spatial-canvas/types'
+import { isFileTreeNode, isPortalNode } from './agent-canvas-node-kinds'
 import { addCanvasPortal } from './agent-canvas-level-actions'
 import { agentStatusForNode, cardAgentState } from './agent-canvas-card-status'
 import {
@@ -48,6 +45,7 @@ import { AgentCanvasLevelBar } from './AgentCanvasLevelBar'
 import { AgentCanvasNodeCard } from './AgentCanvasNodeCard'
 import { AgentCanvasPortalBody } from './AgentCanvasPortalBody'
 import { AgentCanvasGroups } from './AgentCanvasGroups'
+import { AgentCanvasFileTreeBody } from './AgentCanvasFileTreeBody'
 import { setCanvasNodesBlurred } from './agent-canvas-node-actions'
 import { AgentCanvasPromptDialog } from './AgentCanvasPromptDialog'
 import { openCanvasPrompt } from './agent-canvas-prompt'
@@ -58,10 +56,6 @@ import { useAgentCanvasGestures } from './use-agent-canvas-gestures'
 import { useAgentCanvasLivePanes } from './use-agent-canvas-live-panes'
 import { usePrefersReducedMotion } from './use-prefers-reduced-motion'
 import { useStageHeight } from './use-stage-height'
-
-function isPortalNode(node: CanvasNode): node is CanvasNode & { content: CanvasPortalContent } {
-  return node.content.kind === 'portal'
-}
 
 /**
  * A card's editable body. Notes and text blocks share one body store, so this is
@@ -341,6 +335,11 @@ export default function AgentCanvasPage(): React.JSX.Element {
                   body={
                     isPortalNode(node) ? (
                       <AgentCanvasPortalBody node={node} interactive={node.id === selectedNodeId} />
+                    ) : isFileTreeNode(node) ? (
+                      <AgentCanvasFileTreeBody
+                        node={node}
+                        interactive={node.id === selectedNodeId}
+                      />
                     ) : undefined
                   }
                 />

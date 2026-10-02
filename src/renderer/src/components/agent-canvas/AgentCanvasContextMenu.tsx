@@ -9,6 +9,7 @@ import {
   ClipboardPaste,
   Copy,
   CopyPlus,
+  FolderTree,
   Globe,
   Link2Off,
   Lock,
@@ -51,6 +52,7 @@ import {
   setCanvasNodeLock
 } from './agent-canvas-node-actions'
 import { AgentCanvasCardKindItems, AgentCanvasGroupItems } from './AgentCanvasCardKindItems'
+import { addCanvasFileTree, canAddCanvasFileTree } from './agent-canvas-file-tree-actions'
 import { CANVAS_TERMINAL_PRESETS } from './agent-canvas-create-terminal'
 import { openNewTerminalSheet } from './agent-canvas-new-terminal'
 import { openCanvasPrompt } from './agent-canvas-prompt'
@@ -201,6 +203,13 @@ function BoardMenu(props: {
           <ContextMenuItem onSelect={() => props.onAddPortal(props.at)}>
             <Globe className="size-3.5" />
             {translate('auto.components.agentCanvas.addPortal', 'Portal')}
+          </ContextMenuItem>{' '}
+          <ContextMenuItem
+            disabled={!canAddCanvasFileTree()}
+            onSelect={() => addCanvasFileTree(props.at)}
+          >
+            <FolderTree className="size-3.5" />
+            {translate('auto.components.agentCanvas.addFileTree', 'File tree')}
           </ContextMenuItem>
         </ContextMenuSubContent>
       </ContextMenuSub>
@@ -334,6 +343,8 @@ function cardMenuTitle(node: CanvasNode): string {
       )
     case 'portal':
       return node.content.url.replace(/^https?:\/\//, '')
+    case 'fileTree':
+      return node.content.rootName
     default:
       return translate('auto.components.agentCanvas.boardMenu', 'Board')
   }
