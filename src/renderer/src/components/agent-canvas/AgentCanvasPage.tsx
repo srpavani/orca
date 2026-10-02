@@ -21,9 +21,10 @@ import {
   setCanvasViewState,
   setCanvasViewport,
   startCanvasHostSync,
-  syncCanvasSessions,
   useAgentCanvas
 } from './agent-canvas-store'
+import { AgentCanvasBridgeMarkers } from './AgentCanvasBridgeMarkers'
+import { AgentCanvasBridgeMenu } from './AgentCanvasBridgeMenu'
 import { AgentCanvasDrawings, isDrawingNode } from './AgentCanvasDrawings'
 import { AgentCanvasHeader } from './AgentCanvasHeader'
 import { AgentCanvasLevelBar } from './AgentCanvasLevelBar'
@@ -47,7 +48,6 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const viewport = useAgentCanvas((state) => state.viewport)
   const notes = useAgentCanvas((state) => state.notes)
   const selectedNodeId = useAgentCanvas((state) => state.selectedNodeId)
-  const loaded = useAgentCanvas((state) => state.loaded)
   const activeLevelId = useAgentCanvas((state) => state.activeLevelId)
   const drawTool = useAgentCanvas((state) => state.drawTool)
   const surfaceRef = React.useRef<HTMLDivElement | null>(null)
@@ -61,16 +61,15 @@ export default function AgentCanvasPage(): React.JSX.Element {
     [liveSessions]
   )
 
+  // Why: placing new sessions is AgentCanvasBackgroundSync's job (app-wide); the open page
+  // only polls faster so agent note writes and placements show up promptly.
   React.useEffect(() => startCanvasHostSync(), [])
-
-  React.useEffect(() => {
-    syncCanvasSessions(liveSessions)
-  }, [liveSessions, loaded])
 
   // Why: each floor is its own plane; only the active one's cards and wires are drawn.
   const floor = levelContents(document, activeLevelId) ?? document.root
   const nodes = [...floor.nodes].sort((left, right) => left.zIndex - right.zIndex)
-  const cards = nodes.filter((node) => !isDrawingNode(node))
+  // Why: bridge markers draw as pills on both floors (AgentCanvasBridgeMarkers), not as cards.
+  const cards = nodes.filter((node) => !isDrawingNode(node) && node.content.kind !== 'bridge')
 
   const surfaceCenterWorld = (): { x: number; y: number } => {
     const surface = surfaceRef.current
@@ -201,6 +200,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
           pending={gestures.pendingWire}
           onDisconnect={(edge) => disconnectCanvasEdge(edge.id)}
         />
+        <AgentCanvasBridgeMarkers document={document} levelId={activeLevelId} viewport={viewport} />
         {cards.map((node) => (
           <AgentCanvasNodeCard
             key={node.id}
@@ -217,6 +217,11 @@ export default function AgentCanvasPage(): React.JSX.Element {
             onOpen={openNode}
             onRemove={(target) => removeCanvasNode(target.id)}
             liveSlotRef={liveSlotFor(node)}
+            headerActions={
+              node.content.kind === 'session' ? (
+                <AgentCanvasBridgeMenu document={document} node={node} />
+              ) : undefined
+            }
             body={
               isPortalNode(node) ? (
                 <AgentCanvasPortalBody

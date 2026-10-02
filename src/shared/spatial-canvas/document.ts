@@ -205,10 +205,14 @@ export function connectNodes(
   fromNodeId: CanvasNodeId,
   toNodeId: CanvasNodeId,
   createdAt: string,
-  id: CanvasIdFactory = newCanvasId,
-  levelId: CanvasLevelId = null
+  id: CanvasIdFactory = newCanvasId
 ): { document: CanvasDocument; edge: CanvasEdge } | null {
   if (fromNodeId === toNodeId) {
+    return null
+  }
+  // Why: a wire lives on its endpoints' floor; across floors only a bridge may grant access.
+  const levelId = levelIdOf(document, fromNodeId)
+  if (levelId !== levelIdOf(document, toNodeId)) {
     return null
   }
   const kind = inferEdgeKind(document, fromNodeId, toNodeId)

@@ -25,6 +25,11 @@ const ArtifactsPage = lazy(() => import('../components/artifacts/ArtifactsPage')
 const WorkspaceSpacePage = lazy(() => import('../components/workspace-space/WorkspaceSpacePage'))
 const MobilePage = lazy(() => import('../components/mobile/MobilePage'))
 const AgentCanvasPage = lazy(() => import('../components/agent-canvas/AgentCanvasPage'))
+const AgentCanvasBackgroundSync = lazy(() =>
+  import('../components/agent-canvas/AgentCanvasBackgroundSync').then((module) => ({
+    default: module.AgentCanvasBackgroundSync
+  }))
+)
 const Terminal = lazy(() => import('../components/Terminal'))
 
 type WorktreeSidebarScrollRefs = {
@@ -115,6 +120,10 @@ export function AppWorkspaceShell(props: {
       )}
     >
       <div className="flex flex-row flex-1 min-h-0 overflow-hidden">
+        {/* Why: places new sessions on the Agent Canvas app-wide so agents can use it before the view is opened. */}
+        <Suspense fallback={null}>
+          <AgentCanvasBackgroundSync />
+        </Suspense>
         {/* Why: keep the non-workspace titlebar inside this left+center wrapper so it doesn't span over the right-sidebar column. */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0">
           {/* Why: workspace view drops the full-width titlebar so tab groups extend to the top; settings/landing/tasks keep it. */}

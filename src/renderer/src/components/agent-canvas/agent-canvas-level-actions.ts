@@ -1,3 +1,4 @@
+import { bridgeSessions } from '../../../../shared/spatial-canvas/bridges'
 import {
   addDrawing,
   addPortal,
@@ -45,6 +46,14 @@ export function switchCanvasLevel(levelId: string | null): void {
 export function sendCanvasNodeToLevel(nodeId: CanvasNodeId, levelId: string | null): void {
   updateDocument((document) => moveNodeToLevel(document, nodeId, levelId))
   setCanvasViewState({ selectedNodeId: null })
+}
+
+/** Grants one-hop access between sessions on different floors. */
+export function bridgeCanvasSessions(fromNodeId: CanvasNodeId, toNodeId: CanvasNodeId): void {
+  updateDocument((document) => {
+    const result = bridgeSessions(document, fromNodeId, toNodeId)
+    return 'refused' in result ? document : result.document
+  })
 }
 
 export function addCanvasDrawing(shape: CanvasShape, at: CanvasPoint): void {

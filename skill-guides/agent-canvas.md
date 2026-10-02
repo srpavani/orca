@@ -21,6 +21,13 @@ is the permission.** You can only reach what is wired to *your* terminal:
 - **Notes chain.** A note wired to you is yours, and so is every note wired to that note, and so
   on. Treat a chain as one shared document.
 - Cutting a wire revokes access immediately; the next command against that peer fails.
+- **Floors.** The canvas has floors, usually one per git branch/worktree. Wires stay on one
+  floor; the user joins sessions on different floors with a **bridge**. A bridge counts exactly
+  like a wire (one hop), so a bridged peer shows up in `peers` like any other.
+
+Your terminal is put on the canvas automatically the first time you run any `canvas` command
+(on the floor pinned to your branch, if there is one). Being placed grants nothing: until the
+user wires or bridges you to someone, `sessions` is empty.
 
 Your identity comes from the terminal you run in (`ORCA_TERMINAL_HANDLE`). Always run these
 commands from your own Orca terminal; never pass another session's identity.
@@ -36,7 +43,8 @@ Returns `self` (your label), `sessions` (who you may ask), and `notes` (each wit
 `label` shown here and notes by `displayName` or `noteId`. Do not guess names.
 
 If `sessions` is empty, nobody is wired to you. Tell the user which session you need and ask them
-to draw a wire on the Agent Canvas; do not try to reach other terminals some other way.
+to draw a wire on the Agent Canvas (or a bridge, if that session is on another floor); do not try
+to reach other terminals some other way.
 
 ## Ask a connected agent
 
@@ -80,7 +88,7 @@ for logs and status lines so concurrent writers do not erase each other.
 
 | Code | Meaning | What to do |
 | --- | --- | --- |
-| `canvas_caller_not_on_canvas` | Your terminal has no card on the canvas. | Ask the user to open the Agent Canvas once so it places your session. |
+| `canvas_caller_not_on_canvas` | Orca could not identify your terminal. | Run the command from your own Orca terminal, not a detached shell. |
 | `canvas_peer_not_connected` | The peer exists but no wire joins you. | Ask the user to draw the wire. Nothing was sent. |
 | `canvas_peer_not_found` | No session has that label. | Re-run `peers` and use an exact label. |
 | `canvas_peer_ambiguous` | Two wired peers share the label. | Use the peer's `sessionId` from `peers`. |

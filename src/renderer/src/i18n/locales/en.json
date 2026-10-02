@@ -17429,7 +17429,15 @@
         "portalInvalid": "Only http(s) pages can be pinned.",
         "emptyFloor": "Empty floor. Shift-click this floor with a card selected to move it here.",
         "portalReload": "Reload page",
-        "portalOpenExternal": "Open in browser"
+        "portalOpenExternal": "Open in browser",
+        "branchFloorFailed": "Could not create the worktree for this floor.",
+        "branchFloor": "Branch floor",
+        "branchFloorNoRepos": "Add a repository first.",
+        "branchFloorPrompt": "New branch name (a worktree is created for it)",
+        "branchFloorNew": "New branch…",
+        "bridgeJump": "Go to the other floor",
+        "bridgeCut": "Cut bridge (revokes access)",
+        "bridgeTo": "Bridge to another floor"
       }
     },
     "i18n": {

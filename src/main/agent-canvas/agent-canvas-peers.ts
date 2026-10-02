@@ -26,7 +26,7 @@ function requireCaller(snapshot: AgentCanvasSnapshot, callerSessionId: string): 
   if (reach.self === null) {
     throw new AgentCanvasAccessError(
       'canvas_caller_not_on_canvas',
-      'This terminal is not on the Agent Canvas. Open the Agent Canvas in Orca so it can place this session.'
+      'This terminal is not on the Agent Canvas, and Orca could not place it (the terminal was not found).'
     )
   }
   return reach

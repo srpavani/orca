@@ -22,6 +22,8 @@ type AgentCanvasNodeCardProps = {
   liveSlotRef?: (element: HTMLElement | null) => void
   /** Custom body (e.g. a portal page); replaces the default per-kind body. */
   body?: React.ReactNode
+  /** Extra header buttons (e.g. the bridge menu), shown before the remove button. */
+  headerActions?: React.ReactNode
 }
 
 const HEADER_HEIGHT = 30
@@ -116,6 +118,7 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
             }
           />
         ) : null}
+        {props.headerActions}
         <button
           type="button"
           className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"

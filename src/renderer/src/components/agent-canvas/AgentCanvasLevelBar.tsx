@@ -1,5 +1,15 @@
 import React from 'react'
-import { ArrowUpRight, Circle, Globe, Layers, Pencil, Plus, Square, Trash2 } from 'lucide-react'
+import {
+  ArrowUpRight,
+  Circle,
+  GitBranch,
+  Globe,
+  Layers,
+  Pencil,
+  Plus,
+  Square,
+  Trash2
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { levelsOf } from '../../../../shared/spatial-canvas/levels'
@@ -12,6 +22,7 @@ import {
   switchCanvasLevel
 } from './agent-canvas-level-actions'
 import { setCanvasViewState, useAgentCanvas } from './agent-canvas-store'
+import { AgentCanvasBranchFloorMenu } from './AgentCanvasBranchFloorMenu'
 
 const TOOLS = [
   {
@@ -50,6 +61,8 @@ export function AgentCanvasLevelBar(props: {
   const drawTool = useAgentCanvas((state) => state.drawTool)
   const selectedNodeId = useAgentCanvas((state) => state.selectedNodeId)
   const levels = levelsOf(props.document)
+  const branchOf = (levelId: string | null): string | null =>
+    props.document.levels.find((level) => level.id === levelId)?.branch ?? null
 
   const promptName = (fallback: string): string | null => {
     const name = window.prompt(
@@ -99,10 +112,13 @@ export function AgentCanvasLevelBar(props: {
               }
             }}
           >
+            {branchOf(level.id) ? <GitBranch className="size-3 opacity-70" /> : null}
             {level.id === null
               ? translate('auto.components.agentCanvas.groundFloor', 'Ground')
               : level.name}
-            <span className="tabular-nums opacity-60">{level.contents.nodes.length}</span>
+            <span className="tabular-nums opacity-60">
+              {level.contents.nodes.filter((node) => node.content.kind === 'session').length}
+            </span>
           </button>
         )
       })}
@@ -122,6 +138,7 @@ export function AgentCanvasLevelBar(props: {
         <Plus className="size-3" />
         {translate('auto.components.agentCanvas.addFloor', 'Floor')}
       </button>
+      <AgentCanvasBranchFloorMenu chipClassName={chip} />
       {activeLevelId !== null ? (
         <button
           type="button"

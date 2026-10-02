@@ -5,6 +5,7 @@ import {
   newCanvasId,
   type CanvasIdFactory
 } from './document'
+import { reconcileBridges } from './bridges'
 import { levelIdOfNode } from './levels'
 import type {
   CanvasDocument,
@@ -67,21 +68,17 @@ export function deleteLevel(document: CanvasDocument, levelId: string): CanvasDo
     return document
   }
   const survivors = level.nodes.filter((node) => node.content.kind === 'session')
-  const survivorIds = new Set(survivors.map((node) => node.id))
   const gone = new Set(
-    level.nodes.filter((node) => !survivorIds.has(node.id)).map((node) => node.id)
+    level.nodes.filter((node) => node.content.kind !== 'session').map((node) => node.id)
   )
-  return {
+  // Why: a bridge whose marker lived here goes with the floor; bridges of rescued sessions
+  // are re-homed (or dropped if both ends now share the ground) by reconcileBridges.
+  return reconcileBridges({
     ...document,
     root: { ...document.root, nodes: [...document.root.nodes, ...survivors] },
     levels: document.levels.filter((candidate) => candidate.id !== levelId),
-    bridges: document.bridges.filter(
-      (bridge) =>
-        !gone.has(bridge.bridgeNodeId) &&
-        bridge.fromLevelId !== levelId &&
-        bridge.toLevelId !== levelId
-    )
-  }
+    bridges: document.bridges.filter((bridge) => !gone.has(bridge.bridgeNodeId))
+  })
 }
 
 /** Moves a node to another level; its wires are dropped because edges never cross levels. */
@@ -117,7 +114,9 @@ export function moveNodeToLevel(
   if (moving === null) {
     return document
   }
-  return addNode(stripped, moving, targetLevelId)
+  // Why: the node's bridges must follow it to its new floor, or be dropped if they now
+  // join two sessions on the same floor (a plain wire is the right tool there).
+  return reconcileBridges(addNode(stripped, moving, targetLevelId))
 }
 
 export function addDrawing(

@@ -43,13 +43,16 @@ function tab(id: string, title: string, customTitle: string | null = null): Term
 
 describe('liveSessionsFromTabs', () => {
   it('flattens every worktree and prefers the custom title', () => {
-    const sessions = liveSessionsFromTabs({
-      'wt-a': [tab('t1', 'zsh', 'Backend')],
-      'wt-b': [tab('t2', 'claude')]
-    })
+    const sessions = liveSessionsFromTabs(
+      {
+        'wt-a': [tab('t1', 'zsh', 'Backend')],
+        'wt-b': [tab('t2', 'claude')]
+      },
+      new Map([['wt-b', 'feature/x']])
+    )
     expect(sessions).toEqual([
-      { sessionId: 't1', label: 'Backend', worktreeId: 'wt-a' },
-      { sessionId: 't2', label: 'claude', worktreeId: 'wt-b' }
+      { sessionId: 't1', label: 'Backend', worktreeId: 'wt-a', branch: null },
+      { sessionId: 't2', label: 'claude', worktreeId: 'wt-b', branch: 'feature/x' }
     ])
   })
 })
