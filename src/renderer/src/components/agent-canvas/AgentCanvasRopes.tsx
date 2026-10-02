@@ -13,6 +13,10 @@ type AgentCanvasRopesProps = {
   viewport: CanvasViewport
   /** In-progress wire: source node plus the cursor in screen space. */
   pending: { fromNode: CanvasNode; cursor: { x: number; y: number } } | null
+  /** Whether a wire drapes around the cards; the board's appearance decides. */
+  avoidNodes: boolean
+  /** Orthogonal circuit routing instead of a hanging rope. */
+  circuit: boolean
   onDisconnect: (edge: CanvasEdge) => void
 }
 
@@ -33,7 +37,9 @@ export function AgentCanvasRopes(props: AgentCanvasRopesProps): React.JSX.Elemen
     edges,
     nodes: props.nodes,
     viewport,
-    pending
+    pending,
+    avoidNodes: props.avoidNodes,
+    circuit: props.circuit
   })
   const transform = `translate(${-viewport.origin.x * viewport.zoom} ${-viewport.origin.y * viewport.zoom}) scale(${viewport.zoom})`
   return (

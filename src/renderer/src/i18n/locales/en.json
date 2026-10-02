@@ -17515,7 +17515,25 @@
         "hooksEnvironment": "Available in every hook:",
         "floorUnloaded": "Unloaded",
         "wakeFloor": "Wake floor",
-        "unloadFloor": "Unload floor"
+        "unloadFloor": "Unload floor",
+        "backgroundGrid": "Grid",
+        "backgroundPlain": "Plain",
+        "backgroundTransparent": "Transparent",
+        "connectionAvoidNodes": "Around nodes",
+        "connectionBehindNodes": "Behind nodes",
+        "connectionCircuit": "Circuit",
+        "selectionDashed": "Dashed border",
+        "selectionSolid": "Solid border",
+        "selectionCorners": "Corners",
+        "selectionCornerDots": "Corner dots",
+        "selectionElevation": "Elevation",
+        "appearanceTitle": "Canvas appearance",
+        "appearanceDescription": "Set up the canvas and the objects on it.",
+        "background": "Background",
+        "connectionStyle": "Connections",
+        "selectionStyle": "Selection",
+        "appearance": "Appearance",
+        "portalUrlPlaceholder": "http://localhost:3000"
       }
     },
     "i18n": {

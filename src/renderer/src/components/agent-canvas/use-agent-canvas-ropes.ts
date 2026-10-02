@@ -12,6 +12,7 @@ import {
   type Rope,
   type RopeObstacle
 } from '../../../../shared/spatial-canvas/rope-physics'
+import { circuitPath } from '../../../../shared/spatial-canvas/canvas-appearance'
 import type {
   CanvasEdge,
   CanvasNode,
@@ -25,6 +26,10 @@ type RopeInput = {
   viewport: CanvasViewport
   /** In-progress wire: its source node and the cursor in screen space. */
   pending: { fromNode: CanvasNode; cursor: CanvasPoint } | null
+  /** Whether a wire drapes around the cards or is allowed to pass under them. */
+  avoidNodes: boolean
+  /** Orthogonal routing (the circuit style) instead of a hanging rope. */
+  circuit: boolean
 }
 
 type RopeParts = { path: SVGPathElement | null; cut: SVGGElement | null }
@@ -57,9 +62,16 @@ export function useAgentCanvasRopes(input: RopeInput): React.RefObject<SVGSVGEle
   latest.current = input
 
   React.useEffect(() => {
-    syncRopes(ropes.current, obstacles.current, parts.current, input.edges, input.nodes)
+    syncRopes(
+      ropes.current,
+      obstacles.current,
+      parts.current,
+      input.edges,
+      input.nodes,
+      input.avoidNodes
+    )
     paint(svgRef.current, ropes.current, parts.current, latest.current, pending.current)
-  }, [input.edges, input.nodes])
+  }, [input.edges, input.nodes, input.avoidNodes])
 
   React.useEffect(() => {
     const source = input.pending
@@ -124,7 +136,8 @@ function syncRopes(
   obstacles: Map<string, RopeObstacle[]>,
   parts: Map<string, RopeParts>,
   edges: readonly CanvasEdge[],
-  nodes: readonly CanvasNode[]
+  nodes: readonly CanvasNode[],
+  avoidNodes: boolean
 ): void {
   const byId = new Map(nodes.map((node) => [node.id, node]))
   const live = new Set<string>()
@@ -134,7 +147,9 @@ function syncRopes(
       continue
     }
     live.add(edge.id)
-    obstacles.set(edge.id, obstacleList(nodes, [edge.fromNodeId, edge.toNodeId]))
+    // Why empty rather than absent: the physics loop reads this map every step, and
+    // routing through is the same simulation with nothing in the way.
+    obstacles.set(edge.id, avoidNodes ? obstacleList(nodes, [edge.fromNodeId, edge.toNodeId]) : [])
     const existing = ropes.get(edge.id)
     if (existing) {
       repinRope(existing, anchors.start, anchors.end)
@@ -202,7 +217,9 @@ function paint(
   const inverseZoom = 1 / input.viewport.zoom
   for (const [edgeId, rope] of ropes) {
     const { path, cut } = paintParts(svg, edgeId, parts)
-    path?.setAttribute('d', ropePath(rope.points))
+    // Why the appearance decides the shape: the reference offers a rope that drapes
+    // and a circuit-board trace; both are the same simulation, redrawn.
+    path?.setAttribute('d', input.circuit ? circuitPath(rope.points) : ropePath(rope.points))
     const mid = ropeMidpoint(rope.points)
     cut?.setAttribute('transform', `translate(${mid.x} ${mid.y}) scale(${inverseZoom})`)
   }

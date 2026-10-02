@@ -1,7 +1,8 @@
 import React from 'react'
-import { ArrowUpRight, Circle, Globe, Pencil, Square } from 'lucide-react'
+import { ArrowUpRight, Circle, Globe, Palette, Pencil, Square } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
+import { openAppearanceSheet } from './agent-canvas-appearance-sheet'
 import { setCanvasViewState, useAgentCanvas } from './agent-canvas-store'
 
 const TOOLS = [
@@ -54,6 +55,14 @@ export function AgentCanvasLevelBar(props: { onAddPortal: () => void }): React.J
         </button>
       ))}
       <div className="mx-1 h-5 w-px shrink-0 bg-foreground/15" />
+      <button
+        type="button"
+        className={cn(chip, IDLE)}
+        title={translate('auto.components.agentCanvas.appearance', 'Appearance')}
+        onClick={openAppearanceSheet}
+      >
+        <Palette className="size-3.5" />
+      </button>
       <button
         type="button"
         className={cn(chip, IDLE)}

@@ -9,6 +9,7 @@ import type {
   CanvasSessionContent
 } from '../../../../shared/spatial-canvas/types'
 import { AgentCanvasCardControls } from './AgentCanvasCardControls'
+import type { CanvasSelectionPaint } from '../../../../shared/spatial-canvas/canvas-appearance'
 import type { CardAgentState } from './agent-canvas-card-status'
 import { writeCanvasNote } from './agent-canvas-store'
 import { NOTE_PAPER_CLASS, parseNoteColor } from './agent-canvas-note-paper'
@@ -22,6 +23,8 @@ type AgentCanvasNodeCardProps = {
   live: boolean
   /** The session's live agent status, as the rest of Orca reports it. */
   agentState: CardAgentState
+  /** How a selected card is marked; the board's appearance decides. */
+  selection: CanvasSelectionPaint
   noteBody: string
   onHeaderPointerDown: (event: React.PointerEvent, node: CanvasNode) => void
   onPortPointerDown: (event: React.PointerEvent, node: CanvasNode) => void
@@ -34,6 +37,47 @@ type AgentCanvasNodeCardProps = {
   body?: React.ReactNode
   /** Extra header buttons (e.g. the bridge menu), shown before the remove button. */
   headerActions?: React.ReactNode
+}
+
+/** Corner marks for the selection styles that use them. */
+function SelectionMarks(props: { marks: 'brackets' | 'dots' }): React.JSX.Element {
+  if (props.marks === 'dots') {
+    return (
+      <>
+        {['left-1 top-1', 'right-1 top-1', 'left-1 bottom-1', 'right-1 bottom-1'].map(
+          (position) => (
+            <span
+              key={position}
+              aria-hidden="true"
+              className={cn(
+                'pointer-events-none absolute size-1.5 rounded-full bg-canvas-accent',
+                position
+              )}
+            />
+          )
+        )}
+      </>
+    )
+  }
+  return (
+    <>
+      {[
+        'left-0 top-0 border-l-2 border-t-2',
+        'right-0 top-0 border-r-2 border-t-2',
+        'left-0 bottom-0 border-b-2 border-l-2',
+        'right-0 bottom-0 border-b-2 border-r-2'
+      ].map((position) => (
+        <span
+          key={position}
+          aria-hidden="true"
+          className={cn(
+            'pointer-events-none absolute size-2 rounded-sm border-canvas-accent',
+            position
+          )}
+        />
+      ))}
+    </>
+  )
 }
 
 /** Maestri's card header is 16px at 100%; two px more here to fit the header buttons. */
@@ -103,9 +147,15 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
       data-canvas-node-id={node.id}
       className={cn(
         'absolute flex flex-col overflow-hidden rounded-xl',
-        // Why a shadow and not a coloured ring: on a spatial canvas the selected card is the one
-        // that looks lifted off the surface. Maestri's nodes read the same way.
-        selected ? 'canvas-node-shadow-selected' : 'canvas-node-shadow',
+        // Why the paint comes from the board: the reference offers five ways to show a
+        // selected card, and the user picks one for the whole canvas.
+        selected && props.selection.boxShadow === 'elevated'
+          ? 'canvas-node-shadow-selected'
+          : 'canvas-node-shadow',
+        selected &&
+          props.selection.border === 'dashed' &&
+          'border border-dashed border-canvas-accent',
+        selected && props.selection.border === 'solid' && 'border border-canvas-accent',
         isNote ? NOTE_PAPER_CLASS[noteColor(node)] : 'bg-card text-card-foreground',
         wiringSource && 'ring-2 ring-canvas-accent'
       )}
@@ -188,6 +238,9 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
           </div>
         )}
       </div>
+      {selected && props.selection.marks !== 'none' ? (
+        <SelectionMarks marks={props.selection.marks} />
+      ) : null}
       <button
         type="button"
         className="absolute -right-2 top-1/2 size-4 -translate-y-1/2 rounded-full border border-canvas-rope bg-canvas-surface opacity-0 hover:opacity-100"

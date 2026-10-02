@@ -404,5 +404,40 @@
     "text": "rcfile",
     "dynamic": false,
     "count": 1
+  },
+  {
+    "filePath": "src/renderer/src/components/agent-canvas/agent-canvas-create-terminal.ts",
+    "kind": "object-property:label",
+    "text": "Shell",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "src/renderer/src/components/agent-canvas/agent-canvas-create-terminal.ts",
+    "kind": "object-property:label",
+    "text": "Claude Code",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "src/renderer/src/components/agent-canvas/agent-canvas-create-terminal.ts",
+    "kind": "object-property:label",
+    "text": "Codex",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "src/renderer/src/components/agent-canvas/agent-canvas-create-terminal.ts",
+    "kind": "object-property:label",
+    "text": "Antigravity",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "src/renderer/src/components/agent-canvas/agent-canvas-create-terminal.ts",
+    "kind": "object-property:label",
+    "text": "OpenCode",
+    "dynamic": false,
+    "count": 1
   }
 ]

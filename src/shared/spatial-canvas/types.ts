@@ -11,6 +11,7 @@
 
 import type { WorkspaceHooks } from './floor-hooks'
 import type { FloorLoadState } from './floor-lifecycle'
+import type { CanvasAppearance } from './canvas-appearance'
 
 export type CanvasPoint = { x: number; y: number }
 export type CanvasRect = { x: number; y: number; width: number; height: number }
@@ -208,4 +209,6 @@ export type CanvasDocument = {
    * with that floor's identity in the environment. Absent means none.
    */
   hooks?: WorkspaceHooks
+  /** How the board itself is painted: background, wire behaviour, selection. */
+  appearance?: CanvasAppearance
 }

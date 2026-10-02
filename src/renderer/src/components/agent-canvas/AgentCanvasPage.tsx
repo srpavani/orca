@@ -18,7 +18,13 @@ import type {
 } from '../../../../shared/spatial-canvas/types'
 import { addCanvasPortal } from './agent-canvas-level-actions'
 import { agentStatusForNode, cardAgentState } from './agent-canvas-card-status'
-import { canvasGridStyle } from './agent-canvas-grid'
+import {
+  canvasSurfaceStyle,
+  documentAppearance,
+  ropeAvoidsNodes,
+  selectionPaint
+} from '../../../../shared/spatial-canvas/canvas-appearance'
+import { AgentCanvasAppearanceDialog } from './AgentCanvasAppearanceDialog'
 import { parseNoteColor } from './agent-canvas-note-paper'
 import { AgentCanvasNoteColorPicker } from './AgentCanvasNoteColorPicker'
 import { liveSessionsFromTabs } from './agent-canvas-sessions'
@@ -98,6 +104,9 @@ export default function AgentCanvasPage(): React.JSX.Element {
   // only polls faster so agent note writes and placements show up promptly.
   React.useEffect(() => startCanvasHostSync(), [])
 
+  // The board's appearance: background, wire routing, selection mark.
+  const appearance = documentAppearance(document)
+
   // Why each floor is its own plane; only the active one's cards and wires are drawn.
   const floor = levelContents(document, activeLevelId) ?? document.root
   const nodes = [...floor.nodes].sort((left, right) => left.zIndex - right.zIndex)
@@ -153,7 +162,10 @@ export default function AgentCanvasPage(): React.JSX.Element {
         'URL to pin on the canvas (e.g. localhost:3000)'
       ),
       label: translate('auto.components.agentCanvas.portalUrlLabel', 'Page URL'),
-      placeholder: 'http://localhost:3000',
+      placeholder: translate(
+        'auto.components.agentCanvas.portalUrlPlaceholder',
+        'http://localhost:3000'
+      ),
       confirmLabel: translate('auto.components.agentCanvas.pin', 'Pin'),
       onSubmit: (raw) => {
         if (!addCanvasPortal(raw, at)) {
@@ -242,7 +254,11 @@ export default function AgentCanvasPage(): React.JSX.Element {
           'relative min-h-0 flex-1 touch-none overflow-hidden',
           drawTool && 'cursor-crosshair'
         )}
-        style={{ backgroundColor: 'var(--color-canvas-surface)' }}
+        style={
+          appearance.background === 'transparent'
+            ? undefined
+            : { backgroundColor: 'var(--color-canvas-surface)' }
+        }
         onPointerDown={(event) => {
           // Why a click closes the stack: a tilted sheet must not pan or draw, and
           // the reference treats the overview as something you step out of.
@@ -268,7 +284,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
           >
             <div
               className={cn('absolute inset-0', floorOverview && 'pointer-events-none')}
-              style={canvasGridStyle(viewport, window.devicePixelRatio)}
+              style={canvasSurfaceStyle(appearance, viewport, window.devicePixelRatio)}
             >
               <AgentCanvasDrawings
                 nodes={nodes}
@@ -283,6 +299,8 @@ export default function AgentCanvasPage(): React.JSX.Element {
                 edges={floor.edges}
                 viewport={viewport}
                 pending={gestures.pendingWire}
+                avoidNodes={ropeAvoidsNodes(appearance)}
+                circuit={appearance.connectionStyle === 'circuit'}
                 onDisconnect={(edge) => disconnectCanvasEdge(edge.id)}
               />
               <AgentCanvasBridgeMarkers
@@ -301,6 +319,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
                   live={node.content.kind === 'session' && liveById.has(node.content.sessionId)}
                   agentState={cardAgentState(agentStatusForNode(node, layouts, statusByPaneKey))}
                   noteBody={node.content.kind === 'note' ? (notes[node.content.noteId] ?? '') : ''}
+                  selection={selectionPaint(appearance.selectionStyle)}
                   onHeaderPointerDown={gestures.onHeaderPointerDown}
                   onPortPointerDown={gestures.onPortPointerDown}
                   onSelect={(target) => selectCanvasNode(target.id)}
@@ -393,6 +412,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
         <AgentCanvasNewTerminalDialog />
         <AgentCanvasNewFloorDialog />
         <AgentCanvasFloorHooksDialog />
+        <AgentCanvasAppearanceDialog />
       </div>
     </div>
   )
