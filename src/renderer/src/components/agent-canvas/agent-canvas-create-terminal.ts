@@ -11,7 +11,7 @@ export type CanvasTerminalPreset = {
   label: string
 }
 
-/** The quick-start list from the reference's Add → New Terminal menu. */
+/** The reference's quick-start row, in the same order. */
 export const CANVAS_TERMINAL_PRESETS: readonly CanvasTerminalPreset[] = [
   { label: 'Shell' },
   { agent: 'claude', label: 'Claude Code' },
@@ -20,14 +20,35 @@ export const CANVAS_TERMINAL_PRESETS: readonly CanvasTerminalPreset[] = [
   { agent: 'opencode', label: 'OpenCode' }
 ]
 
+/** Everything the new-terminal form can decide. */
+export type CanvasTerminalSpec = {
+  /** Canvas name for the terminal; also what the tab is titled from. */
+  name?: string
+  agent?: TuiAgent
+  /** Shell command; ignored when `agent` is set. */
+  command?: string
+  cwd?: string
+  /** First instruction handed to the launched agent. */
+  prompt?: string
+  /** Chat view instead of the terminal view. */
+  chat?: boolean
+}
+
 const LOCAL_RUNTIME = { kind: 'local' } as const
 
+export type CanvasTerminalCreated = {
+  sessionId: string
+  /** id of the card placed, so the caller can set its flags. */
+  nodeId: string | null
+}
+
 /**
- * Creates a terminal in the workspace the board is showing. The canvas places a
- * card for it on its own (the background sync watches the tab list), so nothing
- * here has to know about nodes — this only has to make the terminal exist.
+ * Creates a terminal in the workspace the board is showing and places its card.
+ * Returns null when it could not be created, so the caller keeps the form open.
  */
-export async function createCanvasTerminal(preset: CanvasTerminalPreset): Promise<void> {
+export async function createCanvasTerminal(
+  spec: CanvasTerminalSpec
+): Promise<CanvasTerminalCreated | null> {
   const worktreeId = useAppStore.getState().activeWorktreeId
   if (!worktreeId) {
     openCanvasPrompt({
@@ -39,7 +60,7 @@ export async function createCanvasTerminal(preset: CanvasTerminalPreset): Promis
       confirmLabel: translate('auto.components.agentCanvas.ok', 'OK'),
       onSubmit: () => {}
     })
-    return
+    return null
   }
   try {
     const created = await callRuntimeRpc<{ tab?: { id?: string; title?: string | null } }>(
@@ -49,22 +70,27 @@ export async function createCanvasTerminal(preset: CanvasTerminalPreset): Promis
         worktree: `id:${worktreeId}`,
         activate: true,
         select: true,
-        ...(preset.agent ? { agent: preset.agent } : {})
+        ...(spec.agent ? { agent: spec.agent } : {}),
+        // Why command is dropped when an agent is chosen: a preset's own command
+        // is what launches the agent, and two commands cannot share one shell.
+        ...(!spec.agent && spec.command ? { command: spec.command } : {}),
+        ...(spec.cwd ? { cwd: spec.cwd } : {}),
+        ...(spec.prompt ? { agentPrompt: spec.prompt } : {}),
+        ...(spec.chat ? { viewMode: 'chat' as const } : {})
       },
       // Spawning a PTY is slower than a read; leave room for it to come up.
       { timeoutMs: 60_000 }
     )
+    const sessionId = created?.tab?.id
+    if (typeof sessionId !== 'string') {
+      return null
+    }
     // Why place it here rather than let the sync file it: the sync puts a session on
     // its branch's floor, so a terminal created while looking at another floor would
     // land out of sight. The board asked for it; the board should show it.
-    const sessionId = created?.tab?.id
-    if (typeof sessionId === 'string') {
-      placeCanvasSessionAt(
-        sessionId,
-        created?.tab?.title?.trim() || preset.label,
-        getAgentCanvasState().activeLevelId
-      )
-    }
+    const label = spec.name?.trim() || created?.tab?.title?.trim() || spec.agent || 'Terminal'
+    const nodeId = placeCanvasSessionAt(sessionId, label, getAgentCanvasState().activeLevelId)
+    return { sessionId, nodeId }
   } catch (error) {
     openCanvasPrompt({
       kind: 'notice',
@@ -76,5 +102,6 @@ export async function createCanvasTerminal(preset: CanvasTerminalPreset): Promis
       confirmLabel: translate('auto.components.agentCanvas.ok', 'OK'),
       onSubmit: () => {}
     })
+    return null
   }
 }

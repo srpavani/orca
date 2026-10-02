@@ -196,9 +196,10 @@ export function placeCanvasSessionAt(
   sessionId: string,
   label: string,
   levelId: CanvasLevelId
-): void {
-  if (sessionNode(store.getState().document, sessionId)) {
-    return
+): string | null {
+  const existing = sessionNode(store.getState().document, sessionId)
+  if (existing) {
+    return existing.id
   }
   const floor = levelContents(store.getState().document, levelId) ?? store.getState().document.root
   const node = createSessionNode({
@@ -206,12 +207,19 @@ export function placeCanvasSessionAt(
     label,
     at: gridSlot(floor.nodes.filter((item) => item.content.kind === 'session').length)
   })
+  // Why the name is pinned: the board created this card with the name the user
+  // typed, so a later terminal-title change must not rename it.
+  const pinned = {
+    ...node,
+    content: { ...node.content, name: label }
+  }
   store.setState(({ document }) => ({
-    document: addNode(document, node, levelId),
-    selectedNodeId: node.id,
-    selectedNodeIds: [node.id]
+    document: addNode(document, pinned, levelId),
+    selectedNodeId: pinned.id,
+    selectedNodeIds: [pinned.id]
   }))
   schedulePersist()
+  return pinned.id
 }
 
 export function moveCanvasNode(nodeId: CanvasNodeId, at: CanvasPoint): void {

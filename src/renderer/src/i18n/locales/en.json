@@ -17466,7 +17466,27 @@
         "boardMenu": "Board",
         "add": "Add",
         "newTerminal": "New terminal",
-        "selectAll": "Select all"
+        "selectAll": "Select all",
+        "quickStart": "Quick start",
+        "newTerminalTitle": "New terminal",
+        "newTerminalDescription": "Create a new terminal on the canvas.",
+        "terminalName": "Terminal name",
+        "command": "Command",
+        "commandPlaceholder": "e.g. claude, codex, or leave empty for a shell",
+        "runsIn": "Runs in",
+        "local": "Local",
+        "workingDirectory": "Working directory",
+        "directoryPlaceholder": "Workspace directory",
+        "browse": "Browse…",
+        "agent": "Agent",
+        "firstPrompt": "First prompt",
+        "firstPromptPlaceholder": "Optional: what this agent should start with",
+        "monitorActivity": "Monitor activity",
+        "monitorActivityHint": "Detects terminal output and tells you when the work finishes.",
+        "maestroMode": "Maestro",
+        "maestroModeHint": "Lets this terminal manage the rest of the board.",
+        "tabDetails": "Details",
+        "tabAgent": "Agent"
       }
     },
     "i18n": {

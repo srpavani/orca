@@ -15,7 +15,8 @@ import { translate } from '@/i18n/i18n'
 import { screenToWorld } from '../../../../shared/spatial-canvas/geometry'
 import { findNode } from '../../../../shared/spatial-canvas/levels'
 import type { CanvasPoint } from '../../../../shared/spatial-canvas/types'
-import { CANVAS_TERMINAL_PRESETS, createCanvasTerminal } from './agent-canvas-create-terminal'
+import { CANVAS_TERMINAL_PRESETS } from './agent-canvas-create-terminal'
+import { openNewTerminalSheet } from './agent-canvas-new-terminal'
 import {
   addCanvasNote,
   getAgentCanvasState,
@@ -79,17 +80,18 @@ export function AgentCanvasContextMenu(props: {
             {translate('auto.components.agentCanvas.add', 'Add')}
           </ContextMenuSubTrigger>
           <ContextMenuSubContent className="w-52">
+            <ContextMenuItem onSelect={() => openNewTerminalSheet()}>
+              <SquareTerminal className="size-3.5" />
+              {translate('auto.components.agentCanvas.newTerminal', 'New terminal')}…
+            </ContextMenuItem>
             <ContextMenuSub>
               <ContextMenuSubTrigger>
-                <SquareTerminal className="size-3.5" />
-                {translate('auto.components.agentCanvas.newTerminal', 'New terminal')}
+                <Plus className="size-3.5" />
+                {translate('auto.components.agentCanvas.quickStart', 'Quick start')}
               </ContextMenuSubTrigger>
               <ContextMenuSubContent className="w-48">
                 {CANVAS_TERMINAL_PRESETS.map((preset) => (
-                  <ContextMenuItem
-                    key={preset.label}
-                    onSelect={() => void createCanvasTerminal(preset)}
-                  >
+                  <ContextMenuItem key={preset.label} onSelect={() => openNewTerminalSheet(preset)}>
                     {preset.label}
                   </ContextMenuItem>
                 ))}
