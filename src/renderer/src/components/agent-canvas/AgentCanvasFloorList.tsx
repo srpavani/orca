@@ -1,12 +1,14 @@
 import React from 'react'
-import { Layers, Layers2, Plus, X, Zap } from 'lucide-react'
+import { Cloud, CloudOff, Layers, Layers2, Plus, X, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
+import { canUnloadFloor, levelIsUnloaded } from '../../../../shared/spatial-canvas/floor-lifecycle'
 import { levelsOf } from '../../../../shared/spatial-canvas/levels'
 import type { CanvasDocument, CanvasLevelId } from '../../../../shared/spatial-canvas/types'
 import {
   deleteCanvasLevel,
   renameCanvasLevel,
+  setCanvasLevelLoaded,
   switchCanvasLevel
 } from './agent-canvas-level-actions'
 import { openCanvasPrompt } from './agent-canvas-prompt'
@@ -80,6 +82,14 @@ export function AgentCanvasFloorList(props: {
               const sessions = level.contents.nodes.filter(
                 (node) => node.content.kind === 'session'
               ).length
+              // Why looked up here: `levelsOf` gives the floor's contents, while the
+              // branch and load state live on the level descriptor.
+              const descriptor =
+                level.id === null
+                  ? null
+                  : (props.document.levels.find((entry) => entry.id === level.id) ?? null)
+              const unloaded = descriptor !== null && levelIsUnloaded(descriptor)
+              const canUnload = descriptor !== null && canUnloadFloor(descriptor)
               return (
                 <div
                   key={level.id ?? 'ground'}
@@ -118,8 +128,36 @@ export function AgentCanvasFloorList(props: {
                     }}
                   >
                     {label}
+                    {unloaded ? (
+                      <span className="ml-1.5 shrink-0 text-[10px] opacity-70">
+                        {translate('auto.components.agentCanvas.floorUnloaded', 'Unloaded')}
+                      </span>
+                    ) : null}
                   </button>
                   <span className="shrink-0 text-[10px] tabular-nums opacity-60">{sessions}</span>
+                  {canUnload ? (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-full p-0.5 text-muted-foreground opacity-0 group-hover:opacity-70 hover:text-foreground hover:opacity-100"
+                      aria-label={
+                        unloaded
+                          ? translate('auto.components.agentCanvas.wakeFloor', 'Wake floor')
+                          : translate('auto.components.agentCanvas.unloadFloor', 'Unload floor')
+                      }
+                      title={
+                        unloaded
+                          ? translate('auto.components.agentCanvas.wakeFloor', 'Wake floor')
+                          : translate('auto.components.agentCanvas.unloadFloor', 'Unload floor')
+                      }
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        const levelId = level.id as string
+                        void setCanvasLevelLoaded(levelId, unloaded)
+                      }}
+                    >
+                      {unloaded ? <Cloud className="size-3" /> : <CloudOff className="size-3" />}
+                    </button>
+                  ) : null}
                   {level.id !== null ? (
                     <button
                       type="button"

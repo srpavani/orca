@@ -10,6 +10,7 @@
  */
 
 import type { WorkspaceHooks } from './floor-hooks'
+import type { FloorLoadState } from './floor-lifecycle'
 
 export type CanvasPoint = { x: number; y: number }
 export type CanvasRect = { x: number; y: number; width: number; height: number }
@@ -176,6 +177,11 @@ export type CanvasLevel = CanvasLevelContents & {
   name: string
   /** Git branch this level is pinned to, when it is an isolated worktree. */
   branch: string | null
+  /**
+   * Whether the level's own checkout is loaded. An unloaded level keeps its
+   * cards and notes but its files are freed; absent means loaded.
+   */
+  state?: FloorLoadState
 }
 
 /**

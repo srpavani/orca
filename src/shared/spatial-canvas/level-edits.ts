@@ -6,6 +6,7 @@ import {
   type CanvasIdFactory
 } from './document'
 import { reconcileBridges } from './bridges'
+import type { FloorLoadState } from './floor-lifecycle'
 import { levelIdOfNode } from './levels'
 import type {
   CanvasDocument,
@@ -37,6 +38,24 @@ export function createLevel(
         }
       ]
     }
+  }
+}
+
+/** Records whether a floor's own checkout is loaded. Returns the same document when it already is. */
+export function setLevelState(
+  document: CanvasDocument,
+  levelId: string,
+  state: FloorLoadState
+): CanvasDocument {
+  const level = document.levels.find((candidate) => candidate.id === levelId)
+  if (!level || (level.state ?? 'active') === state) {
+    return document
+  }
+  return {
+    ...document,
+    levels: document.levels.map((candidate) =>
+      candidate.id === levelId ? { ...candidate, state } : candidate
+    )
   }
 }
 

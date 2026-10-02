@@ -17512,7 +17512,10 @@
         "hooksAutoSetup": "Run setup when a floor is created",
         "hooksAutoSetupHint": "Turn this off to keep setup manual while run and teardown stay automatic.",
         "hooksPlaceholder": "e.g. pnpm install",
-        "hooksEnvironment": "Available in every hook:"
+        "hooksEnvironment": "Available in every hook:",
+        "floorUnloaded": "Unloaded",
+        "wakeFloor": "Wake floor",
+        "unloadFloor": "Unload floor"
       }
     },
     "i18n": {
