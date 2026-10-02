@@ -11,6 +11,7 @@ import {
   removeNode
 } from '../../../../shared/spatial-canvas/document'
 import { levelContents, sessionNode } from '../../../../shared/spatial-canvas/levels'
+import { bodyIdsOfNode } from '../../../../shared/spatial-canvas/node-ops'
 import type { WorkspaceHooks } from '../../../../shared/spatial-canvas/floor-hooks'
 import type { CanvasAppearance } from '../../../../shared/spatial-canvas/canvas-appearance'
 import {
@@ -326,8 +327,10 @@ export function removeCanvasNode(nodeId: CanvasNodeId): void {
       (candidate) => candidate.id === nodeId
     )
     const nextNotes = { ...notes }
-    if (node?.content.kind === 'note') {
-      delete nextNotes[node.content.noteId]
+    // Why every body id, not just a note's: a text block keeps its body in the
+    // same map, and dropping one without the other leaks the text.
+    for (const bodyId of node ? bodyIdsOfNode(node) : []) {
+      delete nextNotes[bodyId]
     }
     return {
       document: removeNode(document, nodeId),

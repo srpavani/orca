@@ -134,7 +134,9 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
           width: box.width / viewport.zoom,
           height: box.height / viewport.zoom
         }
-        const inside = nodesIntersectingRect(document, world).map((node) => node.id)
+        const inside = nodesIntersectingRect(document, world)
+          .filter((node) => node.locked !== true)
+          .map((node) => node.id)
         selectCanvasNodes(gesture.additive ? [...selectedNodeIds, ...inside] : inside)
         return
       }
@@ -204,6 +206,11 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
       if (!surface || event.button !== 0) {
         return
       }
+      // Why a locked card swallows the gesture: the lock is there to keep a card
+      // where it is, so dragging one would contradict the menu item that set it.
+      if (node.locked === true) {
+        return
+      }
       event.stopPropagation()
       if (event.shiftKey) {
         toggleCanvasNodeSelection(node.id)
@@ -226,7 +233,7 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
   const onPortPointerDown = React.useCallback(
     (event: React.PointerEvent, node: CanvasNode) => {
       const surface = surfaceRef.current
-      if (!surface || event.button !== 0) {
+      if (!surface || event.button !== 0 || node.locked === true) {
         return
       }
       event.stopPropagation()

@@ -32,6 +32,7 @@ export type CanvasEdgeId = string
 export type CanvasNodeContent =
   | CanvasSessionContent
   | CanvasNoteContent
+  | CanvasTextContent
   | CanvasStackContent
   | CanvasPortalContent
   | CanvasDrawingContent
@@ -87,6 +88,17 @@ export type CanvasStackContent = {
   memberNodeIds: CanvasNodeId[]
 }
 
+/**
+ * A block of plain text on the board. It is a note without paper: the reference
+ * offers both, and a text block reads as prose where a sticky reads as a memo.
+ */
+export type CanvasTextContent = {
+  kind: 'text'
+  /** Key into the snapshot's body map, the same store notes use. */
+  textId: string
+  pinnedName: string | null
+}
+
 export type CanvasPortalContent = {
   kind: 'portal'
   portalId: string
@@ -111,6 +123,11 @@ export type CanvasNode = {
   id: CanvasNodeId
   frame: CanvasRect
   zIndex: number
+  /**
+   * Locked cards cannot be dragged, wired or selected — the reference's Lock.
+   * Absent means unlocked.
+   */
+  locked?: boolean
   content: CanvasNodeContent
 }
 

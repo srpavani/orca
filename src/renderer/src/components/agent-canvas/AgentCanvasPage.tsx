@@ -60,6 +60,17 @@ function isPortalNode(node: CanvasNode): node is CanvasNode & { content: CanvasP
   return node.content.kind === 'portal'
 }
 
+/**
+ * A card's editable body. Notes and text blocks share one body store, so this is
+ * what makes the body follow whichever id the card carries.
+ */
+function bodyOfNode(node: CanvasNode, notes: Record<string, string>): string {
+  if (node.content.kind === 'note') {
+    return notes[node.content.noteId] ?? ''
+  }
+  return node.content.kind === 'text' ? (notes[node.content.textId] ?? '') : ''
+}
+
 function noteColorOf(node: CanvasNode): CanvasNoteColor {
   return parseNoteColor(node.content.kind === 'note' ? node.content.color : undefined) ?? 'yellow'
 }
@@ -307,7 +318,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
                   wiringSource={gestures.pendingWire?.fromNode.id === node.id}
                   live={node.content.kind === 'session' && liveById.has(node.content.sessionId)}
                   agentState={cardAgentState(agentStatusForNode(node, layouts, statusByPaneKey))}
-                  noteBody={node.content.kind === 'note' ? (notes[node.content.noteId] ?? '') : ''}
+                  noteBody={bodyOfNode(node, notes)}
                   selection={selectionPaint(appearance.selectionStyle)}
                   onHeaderPointerDown={gestures.onHeaderPointerDown}
                   onPortPointerDown={gestures.onPortPointerDown}

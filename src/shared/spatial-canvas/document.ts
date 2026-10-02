@@ -25,6 +25,7 @@ export const newCanvasId: CanvasIdFactory = createNonSecureContextUuid
 
 export const DEFAULT_NODE_SIZE = { width: 640, height: 400 } as const
 export const DEFAULT_NOTE_SIZE = { width: 320, height: 260 } as const
+export const DEFAULT_TEXT_SIZE = { width: 360, height: 220 } as const
 
 export function emptyLevelContents(): CanvasLevelContents {
   return { nodes: [], edges: [], ties: [], groups: [] }
@@ -91,6 +92,26 @@ export function createNoteNode(input: {
       y: input.at.y,
       width: input.size?.width ?? DEFAULT_NOTE_SIZE.width,
       height: input.size?.height ?? DEFAULT_NOTE_SIZE.height
+    },
+    input.id
+  )
+}
+
+/** A text block: the same body store as a note, without paper. */
+export function createTextNode(input: {
+  textId: string
+  at: CanvasPoint
+  pinnedName?: string | null
+  size?: { width: number; height: number }
+  id?: CanvasIdFactory
+}): CanvasNode {
+  return createNode(
+    { kind: 'text', textId: input.textId, pinnedName: input.pinnedName ?? null },
+    {
+      x: input.at.x,
+      y: input.at.y,
+      width: input.size?.width ?? DEFAULT_TEXT_SIZE.width,
+      height: input.size?.height ?? DEFAULT_TEXT_SIZE.height
     },
     input.id
   )

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Globe, StickyNote, SquareTerminal, X } from 'lucide-react'
+import { Globe, Lock, SquareTerminal, StickyNote, Type, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type {
@@ -124,6 +124,14 @@ function nodeTitle(node: CanvasNode, noteBody: string): string {
       translate('auto.components.agentCanvas.untitledNote', 'Untitled note')
     )
   }
+  if (node.content.kind === 'text') {
+    const firstLine = noteBody.split('\n').find((line) => line.trim().length > 0)
+    return (
+      node.content.pinnedName ??
+      firstLine?.trim() ??
+      translate('auto.components.agentCanvas.untitledText', 'Text block')
+    )
+  }
   if (node.content.kind === 'portal') {
     return node.content.url.replace(/^https?:\/\//, '')
   }
@@ -139,9 +147,19 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
   const { node, screen, zoom, selected, wiringSource, live, noteBody } = props
   const session = node.content.kind === 'session' ? node.content : null
   const note = node.content.kind === 'note' ? node.content : null
+  const text = node.content.kind === 'text' ? node.content : null
   const isSession = session !== null
   const isNote = note !== null
-  const Icon = isSession ? SquareTerminal : node.content.kind === 'portal' ? Globe : StickyNote
+  const isText = text !== null
+  const body = note?.noteId ?? text?.textId ?? null
+  const locked = node.locked === true
+  const Icon = isSession
+    ? SquareTerminal
+    : node.content.kind === 'portal'
+      ? Globe
+      : isText
+        ? Type
+        : StickyNote
   return (
     <div
       data-canvas-node-id={node.id}
@@ -157,6 +175,8 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
           'border border-dashed border-canvas-accent',
         selected && props.selection.border === 'solid' && 'border border-canvas-accent',
         isNote ? NOTE_PAPER_CLASS[noteColor(node)] : 'bg-card text-card-foreground',
+        isText && 'bg-transparent shadow-none ring-1 ring-foreground/15',
+        locked && 'opacity-80',
         wiringSource && 'ring-2 ring-canvas-accent'
       )}
       style={{
@@ -197,6 +217,7 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
             live={live}
           />
         ) : null}
+        {locked ? <Lock className="relative size-3 shrink-0 opacity-60" /> : null}
         {props.headerActions ? <span className="relative">{props.headerActions}</span> : null}
         <button
           type="button"
@@ -211,20 +232,28 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {props.body ? (
           props.body
-        ) : isNote ? (
+        ) : body !== null ? (
           <textarea
-            className="size-full resize-none bg-transparent p-2.5 text-xs leading-relaxed outline-none placeholder:opacity-40"
+            className={cn(
+              'size-full resize-none bg-transparent p-2.5 text-xs leading-relaxed outline-none placeholder:opacity-40',
+              isText && 'text-[13px] leading-relaxed'
+            )}
             value={noteBody}
             readOnly={note?.readOnly ?? false}
-            placeholder={translate(
-              'auto.components.agentCanvas.notePlaceholder',
-              'Write a note for connected agents…'
-            )}
+            placeholder={
+              isText
+                ? translate(
+                    'auto.components.agentCanvas.textPlaceholder',
+                    'Write text for the board…'
+                  )
+                : translate(
+                    'auto.components.agentCanvas.notePlaceholder',
+                    'Write a note for connected agents…'
+                  )
+            }
             onPointerDown={(event) => event.stopPropagation()}
             onChange={(event) => {
-              if (note) {
-                writeCanvasNote(note.noteId, event.target.value)
-              }
+              writeCanvasNote(body, event.target.value)
             }}
           />
         ) : isSession && live && props.liveSlotRef ? (
