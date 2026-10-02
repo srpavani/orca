@@ -29,6 +29,10 @@ type AgentCanvasState = Omit<AgentCanvasSnapshot, 'revision'> & {
   /** Note bodies as of `hostRevision`, so a rebase can tell user edits from agent edits. */
   hostNotes: Record<string, string>
   loaded: boolean
+  /** The floor being shown; null is the ground level. View state only, never persisted. */
+  activeLevelId: string | null
+  /** Drawing tool armed on the toolbar; null means pointer/wire mode. */
+  drawTool: 'rect' | 'ellipse' | 'arrow' | 'freehand' | null
 }
 
 const LOCAL_RUNTIME = { kind: 'local' } as const
@@ -51,7 +55,9 @@ const store = createStore<AgentCanvasState>(() => ({
   selectedNodeId: null,
   hostRevision: 0,
   hostNotes: {},
-  loaded: false
+  loaded: false,
+  activeLevelId: null,
+  drawTool: null
 }))
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
@@ -132,7 +138,7 @@ export function startCanvasHostSync(intervalMs = 1500): () => void {
   }
 }
 
-function updateDocument(update: (document: CanvasDocument) => CanvasDocument): void {
+export function updateDocument(update: (document: CanvasDocument) => CanvasDocument): void {
   const current = store.getState().document
   const next = update(current)
   if (next !== current) {
@@ -200,8 +206,8 @@ export function disconnectCanvasEdge(edgeId: CanvasEdgeId): void {
 export function addCanvasNote(at: CanvasPoint): CanvasNodeId {
   const noteId = newCanvasId()
   const node = createNoteNode({ noteId, at })
-  store.setState(({ document, notes }) => ({
-    document: addNode(document, node),
+  store.setState(({ document, notes, activeLevelId }) => ({
+    document: addNode(document, node, activeLevelId),
     notes: { ...notes, [noteId]: '' },
     selectedNodeId: node.id
   }))
@@ -231,4 +237,11 @@ export function removeCanvasNode(nodeId: CanvasNodeId): void {
     }
   })
   schedulePersist()
+}
+
+/** View-only state (active floor, armed draw tool); never persisted to the host. */
+export function setCanvasViewState(
+  patch: Partial<Pick<AgentCanvasState, 'activeLevelId' | 'drawTool' | 'selectedNodeId'>>
+): void {
+  store.setState(patch)
 }

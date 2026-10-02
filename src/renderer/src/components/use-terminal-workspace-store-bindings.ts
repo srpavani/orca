@@ -62,8 +62,10 @@ export function useTerminalWorkspaceStoreBindings(controller: TerminalWorkspaceF
   const tabBarOrder = renderedActiveWorktreeId
     ? tabBarOrderByWorktree[renderedActiveWorktreeId]
     : undefined
+  // Why: the Agent Canvas borrows live panes through the same portal so a card shows the
+  // real PTY instead of a copy; both views publish targets and clear them on unmount.
   const activityTerminalPortals: ActivityTerminalPortalTarget[] = useActivityTerminalPortals(
-    activeView === 'activity'
+    activeView === 'activity' || activeView === 'canvas'
   )
 
   return {

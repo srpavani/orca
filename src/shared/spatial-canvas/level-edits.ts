@@ -1,0 +1,180 @@
+import {
+  addNode,
+  createNode,
+  emptyLevelContents,
+  newCanvasId,
+  type CanvasIdFactory
+} from './document'
+import { levelIdOfNode } from './levels'
+import type {
+  CanvasDocument,
+  CanvasLevelId,
+  CanvasNode,
+  CanvasNodeId,
+  CanvasPoint,
+  CanvasShape
+} from './types'
+
+/** Adds a named level (a "floor"), optionally pinned to a git branch. */
+export function createLevel(
+  document: CanvasDocument,
+  input: { name: string; branch?: string | null },
+  id: CanvasIdFactory = newCanvasId
+): { document: CanvasDocument; levelId: string } {
+  const levelId = id()
+  return {
+    levelId,
+    document: {
+      ...document,
+      levels: [
+        ...document.levels,
+        {
+          id: levelId,
+          name: input.name.trim() || 'Floor',
+          branch: input.branch ?? null,
+          ...emptyLevelContents()
+        }
+      ]
+    }
+  }
+}
+
+export function renameLevel(
+  document: CanvasDocument,
+  levelId: string,
+  name: string
+): CanvasDocument {
+  const trimmed = name.trim()
+  if (!trimmed) {
+    return document
+  }
+  return {
+    ...document,
+    levels: document.levels.map((level) =>
+      level.id === levelId ? { ...level, name: trimmed } : level
+    )
+  }
+}
+
+/**
+ * Deletes a level and everything on it. Sessions placed there move back to the
+ * ground level instead of vanishing, because removing a session node silently
+ * revokes every wire that granted it access — that must stay a deliberate act.
+ */
+export function deleteLevel(document: CanvasDocument, levelId: string): CanvasDocument {
+  const level = document.levels.find((candidate) => candidate.id === levelId)
+  if (!level) {
+    return document
+  }
+  const survivors = level.nodes.filter((node) => node.content.kind === 'session')
+  const survivorIds = new Set(survivors.map((node) => node.id))
+  const gone = new Set(
+    level.nodes.filter((node) => !survivorIds.has(node.id)).map((node) => node.id)
+  )
+  return {
+    ...document,
+    root: { ...document.root, nodes: [...document.root.nodes, ...survivors] },
+    levels: document.levels.filter((candidate) => candidate.id !== levelId),
+    bridges: document.bridges.filter(
+      (bridge) =>
+        !gone.has(bridge.bridgeNodeId) &&
+        bridge.fromLevelId !== levelId &&
+        bridge.toLevelId !== levelId
+    )
+  }
+}
+
+/** Moves a node to another level; its wires are dropped because edges never cross levels. */
+export function moveNodeToLevel(
+  document: CanvasDocument,
+  nodeId: CanvasNodeId,
+  targetLevelId: CanvasLevelId
+): CanvasDocument {
+  const from = levelIdOfNode(document, nodeId)
+  if (from === targetLevelId) {
+    return document
+  }
+  let moving: CanvasNode | null = null
+  const strip = <T extends { nodes: CanvasNode[]; edges: CanvasDocument['root']['edges'] }>(
+    contents: T
+  ): T => {
+    const node = contents.nodes.find((candidate) => candidate.id === nodeId)
+    if (!node) {
+      return contents
+    }
+    moving = node
+    return {
+      ...contents,
+      nodes: contents.nodes.filter((candidate) => candidate.id !== nodeId),
+      edges: contents.edges.filter((edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId)
+    }
+  }
+  const stripped: CanvasDocument = {
+    ...document,
+    root: strip(document.root),
+    levels: document.levels.map((level) => strip(level))
+  }
+  if (moving === null) {
+    return document
+  }
+  return addNode(stripped, moving, targetLevelId)
+}
+
+export function addDrawing(
+  document: CanvasDocument,
+  shape: CanvasShape,
+  at: CanvasPoint,
+  levelId: CanvasLevelId,
+  id: CanvasIdFactory = newCanvasId
+): { document: CanvasDocument; node: CanvasNode } {
+  const size = shapeSize(shape)
+  const node = createNode({ kind: 'drawing', shape }, { x: at.x, y: at.y, ...size }, id)
+  return { node, document: addNode(document, { ...node, zIndex: -1 }, levelId) }
+}
+
+export function addPortal(
+  document: CanvasDocument,
+  url: string,
+  at: CanvasPoint,
+  levelId: CanvasLevelId,
+  id: CanvasIdFactory = newCanvasId
+): { document: CanvasDocument; node: CanvasNode } {
+  const node = createNode(
+    { kind: 'portal', portalId: id(), url },
+    { x: at.x, y: at.y, width: 520, height: 380 },
+    id
+  )
+  return { node, document: addNode(document, node, levelId) }
+}
+
+function shapeSize(shape: CanvasShape): { width: number; height: number } {
+  if (shape.type === 'rect' || shape.type === 'ellipse') {
+    return { width: shape.width, height: shape.height }
+  }
+  const points = shape.type === 'arrow' ? [shape.from, shape.to] : shape.points
+  const xs = points.map((point) => point.x)
+  const ys = points.map((point) => point.y)
+  return {
+    width: Math.max(1, Math.max(...xs) - Math.min(...xs)),
+    height: Math.max(1, Math.max(...ys) - Math.min(...ys))
+  }
+}
+
+/** Only http(s) pages may be embedded; anything else would run with app privileges. */
+export function normalizePortalUrl(raw: string): string | null {
+  const trimmed = raw.trim()
+  // Why: "localhost:3000" also matches the scheme grammar, so only `scheme://` or a
+  // known host-less scheme counts as explicit; everything else is a bare host.
+  const explicit =
+    /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) || /^(javascript|data|file|about|blob):/i.test(trimmed)
+  const candidate = explicit ? trimmed : `https://${trimmed}`
+  if (!trimmed) {
+    return null
+  }
+  try {
+    const url = new URL(candidate)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null
+  } catch {
+    return null
+  }
+}

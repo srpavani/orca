@@ -17413,7 +17413,23 @@
         "untitledNote": "Untitled note",
         "wireFrom": "Drag to connect",
         "zoomIn": "Zoom in",
-        "zoomOut": "Zoom out"
+        "zoomOut": "Zoom out",
+        "drawFreehand": "Pen",
+        "drawRect": "Box",
+        "drawEllipse": "Ellipse",
+        "drawArrow": "Arrow",
+        "floorNamePrompt": "Floor name (e.g. a branch)",
+        "floorSendHint": "Shift-click to move the selected card here",
+        "groundFloor": "Ground",
+        "addFloor": "Floor",
+        "deleteFloor": "Delete floor",
+        "deleteFloorConfirm": "Delete this floor? Sessions on it move to the ground floor; notes, drawings and portals are removed.",
+        "addPortal": "Portal",
+        "portalPrompt": "URL to pin on the canvas (e.g. localhost:3000)",
+        "portalInvalid": "Only http(s) pages can be pinned.",
+        "emptyFloor": "Empty floor. Shift-click this floor with a card selected to move it here.",
+        "portalReload": "Reload page",
+        "portalOpenExternal": "Open in browser"
       }
     },
     "i18n": {
