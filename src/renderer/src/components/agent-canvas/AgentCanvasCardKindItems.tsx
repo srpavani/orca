@@ -6,9 +6,17 @@ import {
   Group,
   PanelTopClose,
   PanelTopOpen,
+  Settings2,
   Ungroup
 } from 'lucide-react'
-import { ContextMenuItem } from '@/components/ui/context-menu'
+import {
+  ContextMenuItem,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger
+} from '@/components/ui/context-menu'
+import { elementDefaultChoices } from '../../../../shared/spatial-canvas/element-defaults'
+import { useAgentCanvas } from './agent-canvas-store'
 import { translate } from '@/i18n/i18n'
 import { supportsRedaction } from '../../../../shared/spatial-canvas/node-display'
 import type { CanvasNode, CanvasNodeId } from '../../../../shared/spatial-canvas/types'
@@ -18,7 +26,12 @@ import {
   setCanvasNodesBlurred,
   toggleCanvasPortalChrome
 } from './agent-canvas-node-actions'
-import { anyNodeGrouped, groupNodes, ungroupNodes } from './agent-canvas-group-actions'
+import {
+  adoptElementDefault,
+  anyNodeGrouped,
+  groupNodes,
+  ungroupNodes
+} from './agent-canvas-group-actions'
 
 /**
  * The card-menu items that only some kinds carry, in the reference's terms:
@@ -96,5 +109,41 @@ export function AgentCanvasGroupItems(props: {
         </ContextMenuItem>
       ) : null}
     </>
+  )
+}
+
+/**
+ * The reference's "New element defaults" submenu: adopt this card's size (and a
+ * note's colour) for the cards created after it. Items that would change
+ * nothing are disabled, as there.
+ */
+export function AgentCanvasElementDefaultsItems(props: {
+  node: CanvasNode
+}): React.JSX.Element | null {
+  const defaults = useAgentCanvas((state) => state.document.elementDefaults) ?? {}
+  const choices = elementDefaultChoices(props.node, defaults)
+  if (choices.length === 0) {
+    return null
+  }
+  return (
+    <ContextMenuSub>
+      <ContextMenuSubTrigger>
+        <Settings2 className="size-3.5" />
+        {translate('auto.components.agentCanvas.newElementDefaults', 'New element defaults')}
+      </ContextMenuSubTrigger>
+      <ContextMenuSubContent className="w-48">
+        {choices.map((choice) => (
+          <ContextMenuItem
+            key={choice.kind}
+            disabled={choice.current}
+            onSelect={() => adoptElementDefault(choice)}
+          >
+            {choice.kind === 'size'
+              ? translate('auto.components.agentCanvas.useThisSize', 'Use this size')
+              : translate('auto.components.agentCanvas.useThisColor', 'Use this color')}
+          </ContextMenuItem>
+        ))}
+      </ContextMenuSubContent>
+    </ContextMenuSub>
   )
 }

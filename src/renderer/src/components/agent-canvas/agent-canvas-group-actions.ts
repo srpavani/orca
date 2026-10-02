@@ -6,6 +6,10 @@ import {
   type GroupColor
 } from '../../../../shared/spatial-canvas/groups'
 import { findCanvasNode } from '../../../../shared/spatial-canvas/node-ops'
+import {
+  applyElementDefault,
+  type ElementDefaultChoice
+} from '../../../../shared/spatial-canvas/element-defaults'
 import type { CanvasLevelId, CanvasNodeId } from '../../../../shared/spatial-canvas/types'
 import { getAgentCanvasState, updateDocument } from './agent-canvas-store'
 
@@ -46,4 +50,12 @@ export function anyNodeGrouped(nodeIds: readonly CanvasNodeId[]): boolean {
         : document.levels.find((level) => level.id === found.levelId)
     return contents?.groups.some((group) => group.nodeIds.includes(nodeId)) ?? false
   })
+}
+
+/** Adopts a card's size or colour as the default for new cards of its kind. */
+export function adoptElementDefault(choice: ElementDefaultChoice): void {
+  updateDocument((document) => ({
+    ...document,
+    elementDefaults: applyElementDefault(document.elementDefaults ?? {}, choice)
+  }))
 }

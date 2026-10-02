@@ -208,7 +208,8 @@ export function placeCanvasSessionAt(
   const node = createSessionNode({
     sessionId,
     label,
-    at: gridSlot(floor.nodes.filter((item) => item.content.kind === 'session').length)
+    at: gridSlot(floor.nodes.filter((item) => item.content.kind === 'session').length),
+    size: store.getState().document.elementDefaults?.sessionSize
   })
   // Why the name is pinned: the board created this card with the name the user
   // typed, so a later terminal-title change must not rename it.
@@ -282,9 +283,15 @@ export function disconnectCanvasEdge(edgeId: CanvasEdgeId): void {
   updateDocument((document) => removeEdge(document, edgeId))
 }
 
-export function addCanvasNote(at: CanvasPoint, color: CanvasNoteColor = 'yellow'): CanvasNodeId {
+export function addCanvasNote(at: CanvasPoint, color?: CanvasNoteColor): CanvasNodeId {
   const noteId = newCanvasId()
-  const node = createNoteNode({ noteId, at, color })
+  const defaults = store.getState().document.elementDefaults
+  const node = createNoteNode({
+    noteId,
+    at,
+    color: color ?? defaults?.noteColor ?? 'yellow',
+    size: defaults?.noteSize
+  })
   store.setState(({ document, notes, activeLevelId }) => ({
     document: addNode(document, node, activeLevelId),
     notes: { ...notes, [noteId]: '' },

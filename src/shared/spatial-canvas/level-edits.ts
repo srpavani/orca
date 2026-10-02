@@ -159,7 +159,7 @@ export function addPortal(
 ): { document: CanvasDocument; node: CanvasNode } {
   const node = createNode(
     { kind: 'portal', portalId: id(), url },
-    { x: at.x, y: at.y, width: 520, height: 380 },
+    { x: at.x, y: at.y, ...(document.elementDefaults?.portalSize ?? { width: 520, height: 380 }) },
     id
   )
   return { node, document: addNode(document, node, levelId) }

@@ -12,6 +12,7 @@
 import type { WorkspaceHooks } from './floor-hooks'
 import type { FloorLoadState } from './floor-lifecycle'
 import type { CanvasAppearance } from './canvas-appearance'
+import type { CanvasElementDefaults } from './element-defaults'
 
 export type CanvasPoint = { x: number; y: number }
 export type CanvasRect = { x: number; y: number; width: number; height: number }
@@ -251,4 +252,6 @@ export type CanvasDocument = {
   hooks?: WorkspaceHooks
   /** How the board itself is painted: background, wire behaviour, selection. */
   appearance?: CanvasAppearance
+  /** Sizes and note colour adopted from a card ("New element defaults"). */
+  elementDefaults?: CanvasElementDefaults
 }

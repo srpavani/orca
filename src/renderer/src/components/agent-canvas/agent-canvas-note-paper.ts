@@ -33,6 +33,20 @@ export const NOTE_COLOR_ORDER: readonly CanvasNoteColor[] = [
   'midnight'
 ]
 
+/** English names, the fallback when a locale has no entry for a colour key. */
+export const NOTE_COLOR_NAMES: Record<CanvasNoteColor, string> = {
+  yellow: 'Yellow',
+  pink: 'Pink',
+  blue: 'Blue',
+  green: 'Green',
+  orange: 'Orange',
+  purple: 'Purple',
+  white: 'White',
+  charcoal: 'Charcoal',
+  slate: 'Slate',
+  midnight: 'Midnight'
+}
+
 export const NOTE_COLOR_KEYS: Record<CanvasNoteColor, string> = {
   yellow: 'auto.components.agentCanvas.noteColorYellow',
   pink: 'auto.components.agentCanvas.noteColorPink',

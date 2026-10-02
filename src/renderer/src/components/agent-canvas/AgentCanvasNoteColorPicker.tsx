@@ -4,7 +4,12 @@ import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { CanvasNoteColor, CanvasNodeId } from '../../../../shared/spatial-canvas/types'
-import { NOTE_COLOR_KEYS, NOTE_COLOR_ORDER, NOTE_PAPER_CLASS } from './agent-canvas-note-paper'
+import {
+  NOTE_COLOR_KEYS,
+  NOTE_COLOR_NAMES,
+  NOTE_COLOR_ORDER,
+  NOTE_PAPER_CLASS
+} from './agent-canvas-note-paper'
 import { setCanvasNoteColor } from './agent-canvas-store'
 
 /**
@@ -41,8 +46,8 @@ export function AgentCanvasNoteColorPicker(props: {
                 NOTE_PAPER_CLASS[color],
                 color === props.color ? 'border-foreground' : 'border-border'
               )}
-              aria-label={translate(NOTE_COLOR_KEYS[color], color)}
-              title={translate(NOTE_COLOR_KEYS[color], color)}
+              aria-label={translate(NOTE_COLOR_KEYS[color], NOTE_COLOR_NAMES[color])}
+              title={translate(NOTE_COLOR_KEYS[color], NOTE_COLOR_NAMES[color])}
               onClick={() => setCanvasNoteColor(props.nodeId, color)}
             />
           ))}

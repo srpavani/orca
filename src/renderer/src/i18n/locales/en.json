@@ -17636,7 +17636,14 @@
         "fileOpsTrashBody": "{{name}} will be moved to the Trash. You can restore it from there.",
         "fileOpsMoveToTrash": "Move to Trash",
         "fileOpsCopyPath": "Copy Path",
-        "fileOpsCopyRelativePath": "Copy Relative Path"
+        "fileOpsCopyRelativePath": "Copy Relative Path",
+        "newElementDefaults": "New element defaults",
+        "useThisSize": "Use this size",
+        "useThisColor": "Use this color",
+        "noteColorWhite": "White",
+        "noteColorCharcoal": "Charcoal",
+        "noteColorSlate": "Slate",
+        "noteColorMidnight": "Midnight"
       }
     },
     "i18n": {
