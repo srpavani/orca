@@ -17486,7 +17486,19 @@
         "maestroMode": "Maestro",
         "maestroModeHint": "Lets this terminal manage the rest of the board.",
         "tabDetails": "Details",
-        "tabAgent": "Agent"
+        "tabAgent": "Agent",
+        "newFloorTitle": "New floor",
+        "newFloorDescriptionFull": "Name the new floor and it opens right after.",
+        "floorNameExample": "e.g. Refactor auth",
+        "isolation": "Repository isolation",
+        "isolationHint": "Each floor gets its own checkout of the project on its own branch, so you and your agents can work on different things at the same time without touching each other’s files.",
+        "isolationNoRepo": "This workspace is not in a Git repository, so a floor cannot have its own checkout.",
+        "branchLegend": "Create a new branch, or use one that already exists",
+        "branchModeNew": "New branch",
+        "branchModeExisting": "Existing branch",
+        "branchPlaceholderNew": "Name for the new branch",
+        "branchPlaceholderExisting": "Name of the existing branch",
+        "branchInvalid": "That is not a valid Git branch name. Avoid spaces and the characters ~ ^ : ? *"
       }
     },
     "i18n": {

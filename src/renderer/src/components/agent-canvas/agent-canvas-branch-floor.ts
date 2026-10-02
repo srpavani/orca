@@ -55,7 +55,12 @@ export function pinFloorToWorktree(
  * repo's default base when it does not exist yet), then pins a floor to it.
  * The new worktree's startup terminal lands on that floor by itself.
  */
-export async function openBranchFloor(repoId: string, branch: string): Promise<boolean> {
+export async function openBranchFloor(
+  repoId: string,
+  branch: string,
+  /** Floor name; without it the branch names the floor. */
+  floorName?: string
+): Promise<boolean> {
   const name = normalizeBranch(branch)
   if (!name) {
     return false
@@ -94,9 +99,10 @@ export async function openBranchFloor(repoId: string, branch: string): Promise<b
   }
   const tabs = useAppStore.getState().tabsByWorktree[worktree.id] ?? []
   const sessionIds = new Set(tabs.map((tab) => tab.id))
+  const name2 = floorName?.trim() || name
   let levelId: string | null = null
   updateDocument((document) => {
-    const result = pinFloorToWorktree(document, { name, branch: name, sessionIds })
+    const result = pinFloorToWorktree(document, { name: name2, branch: name, sessionIds })
     levelId = result.levelId
     return result.document
   })

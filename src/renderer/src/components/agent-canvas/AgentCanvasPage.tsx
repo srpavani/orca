@@ -38,6 +38,7 @@ import { AgentCanvasBridgeMenu } from './AgentCanvasBridgeMenu'
 import { AgentCanvasDrawings, isDrawingNode } from './AgentCanvasDrawings'
 import { AgentCanvasContextMenu, EMPTY_CONTEXT_TARGET } from './AgentCanvasContextMenu'
 import { AgentCanvasFloorList } from './AgentCanvasFloorList'
+import { AgentCanvasNewFloorDialog } from './AgentCanvasNewFloorDialog'
 import { AgentCanvasNewTerminalDialog } from './AgentCanvasNewTerminalDialog'
 import { AgentCanvasFloorStack } from './AgentCanvasFloorStack'
 import { AgentCanvasHeader } from './AgentCanvasHeader'
@@ -389,6 +390,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
         />
         <AgentCanvasPromptDialog />
         <AgentCanvasNewTerminalDialog />
+        <AgentCanvasNewFloorDialog />
       </div>
     </div>
   )

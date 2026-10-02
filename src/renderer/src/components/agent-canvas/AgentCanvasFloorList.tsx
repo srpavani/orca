@@ -5,12 +5,12 @@ import { translate } from '@/i18n/i18n'
 import { levelsOf } from '../../../../shared/spatial-canvas/levels'
 import type { CanvasDocument, CanvasLevelId } from '../../../../shared/spatial-canvas/types'
 import {
-  addCanvasLevel,
   deleteCanvasLevel,
   renameCanvasLevel,
   switchCanvasLevel
 } from './agent-canvas-level-actions'
 import { openCanvasPrompt } from './agent-canvas-prompt'
+import { openNewFloorSheet } from './agent-canvas-new-floor'
 import { setCanvasViewState, useAgentCanvas } from './agent-canvas-store'
 
 /** One row of the floor list, matching the reference's 38px item. */
@@ -56,27 +56,7 @@ export function AgentCanvasFloorList(props: {
           <button
             type="button"
             className="mb-1 flex shrink-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left text-xs font-medium text-canvas-accent hover:bg-foreground/5"
-            onClick={() => {
-              openCanvasPrompt({
-                kind: 'text',
-                title: translate('auto.components.agentCanvas.newFloor', 'New floor'),
-                description: translate(
-                  'auto.components.agentCanvas.newFloorDescription',
-                  'Give the new floor a name and it opens right after.'
-                ),
-                label: translate('auto.components.agentCanvas.floorNameLabel', 'Floor name'),
-                placeholder: translate(
-                  'auto.components.agentCanvas.newFloorPlaceholder',
-                  'Floor {number}'
-                ).replace('{number}', String(levels.length)),
-                confirmLabel: translate('auto.components.agentCanvas.create', 'Create'),
-                onSubmit: (name) => {
-                  if (name.length > 0) {
-                    addCanvasLevel(name)
-                  }
-                }
-              })
-            }}
+            onClick={openNewFloorSheet}
           >
             <Plus className="size-3.5" />
             {translate('auto.components.agentCanvas.newFloor', 'New floor')}
