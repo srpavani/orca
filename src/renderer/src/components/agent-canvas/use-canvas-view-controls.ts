@@ -1,0 +1,77 @@
+import React from 'react'
+import {
+  contentOutsideStage,
+  fitCanvasViewport,
+  nextZoomLevel,
+  zoomAtPoint
+} from '../../../../shared/spatial-canvas/geometry'
+import type { CanvasNode } from '../../../../shared/spatial-canvas/types'
+import { getAgentCanvasState, setCanvasViewport } from './agent-canvas-store'
+
+type ViewControls = {
+  /** Zoom one step, keeping the stage's centre still. */
+  zoomBy: (direction: 1 | -1) => void
+  /** Frame every card on the floor. */
+  fitView: () => void
+}
+
+function stageSizeOf(surface: HTMLDivElement | null): { width: number; height: number } {
+  return surface
+    ? { width: surface.clientWidth, height: surface.clientHeight }
+    : { width: 0, height: 0 }
+}
+
+/**
+ * The board's viewport controls, plus the fit that keeps the board honest.
+ *
+ * Why the fit: a viewport saved against a different layout — or a card placed
+ * outside the one on screen — leaves the canvas looking empty while the document
+ * is full. It frames the cards only when the set of them changes and none is in
+ * view, so it never yanks the view back from someone who panned away on purpose.
+ */
+export function useCanvasViewControls(input: {
+  surfaceRef: React.RefObject<HTMLDivElement | null>
+  cards: readonly CanvasNode[]
+  loaded: boolean
+}): ViewControls {
+  const latest = React.useRef(input)
+  latest.current = input
+
+  const fitView = (): void => {
+    const fitted = fitCanvasViewport(
+      latest.current.cards.map((node) => node.frame),
+      stageSizeOf(latest.current.surfaceRef.current)
+    )
+    if (fitted) {
+      setCanvasViewport(fitted)
+    }
+  }
+
+  const zoomBy = (direction: 1 | -1): void => {
+    const stage = stageSizeOf(latest.current.surfaceRef.current)
+    const centre = { x: stage.width / 2, y: stage.height / 2 }
+    const current = getAgentCanvasState().viewport
+    setCanvasViewport(zoomAtPoint(current, nextZoomLevel(current.zoom, direction, null), centre))
+  }
+
+  const signature = input.cards.map((node) => node.id).join(',')
+  const framedSignature = React.useRef<string | null>(null)
+  React.useEffect(() => {
+    const { cards, loaded, surfaceRef } = latest.current
+    if (!loaded || signature === framedSignature.current) {
+      return
+    }
+    framedSignature.current = signature
+    const stage = stageSizeOf(surfaceRef.current)
+    const frames = cards.map((node) => node.frame)
+    if (cards.length === 0 || !contentOutsideStage(getAgentCanvasState().viewport, stage, frames)) {
+      return
+    }
+    const fitted = fitCanvasViewport(frames, stage)
+    if (fitted) {
+      setCanvasViewport(fitted)
+    }
+  }, [input.loaded, signature])
+
+  return { zoomBy, fitView }
+}

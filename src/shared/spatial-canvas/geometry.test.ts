@@ -7,7 +7,10 @@ import {
   ZOOM_LEVELS,
   centerOnRect,
   clampZoom,
+  contentBounds,
+  contentOutsideStage,
   createViewport,
+  fitCanvasViewport,
   nextZoomLevel,
   panBy,
   screenToWorld,
@@ -165,5 +168,78 @@ describe('centerOnRect', () => {
       99
     )
     expect(viewport.zoom).toBe(MAX_ZOOM)
+  })
+})
+
+describe('contentBounds', () => {
+  it('wraps every rect', () => {
+    const bounds = contentBounds([
+      { x: 10, y: 20, width: 30, height: 40 },
+      { x: -5, y: 60, width: 10, height: 10 }
+    ])
+    expect(bounds).toEqual({ x: -5, y: 20, width: 45, height: 50 })
+  })
+
+  it('has nothing to wrap for an empty board', () => {
+    expect(contentBounds([])).toBeNull()
+  })
+})
+
+describe('fitCanvasViewport', () => {
+  const stage = { width: 1000, height: 500 }
+
+  it('centres the cards and picks the largest level that fits', () => {
+    // 800x400 in a 1000x500 stage leaves 840x340 of room once padding is taken
+    // off, so the largest level that fits is 0.75 rather than 1.
+    const viewport = fitCanvasViewport([{ x: 9000, y: 9000, width: 800, height: 400 }], stage)
+    expect(viewport).not.toBeNull()
+    expect(viewport?.zoom).toBe(0.75)
+    // The card's centre lands at the stage's centre.
+    const centre = worldToScreen({ x: 9000 + 400, y: 9000 + 200 }, viewport ?? viewportAt(1))
+    expect(centre.x).toBeCloseTo(500)
+    expect(centre.y).toBeCloseTo(250)
+  })
+
+  it('steps down when the board is larger than the window', () => {
+    const viewport = fitCanvasViewport([{ x: 0, y: 0, width: 4000, height: 2000 }], stage)
+    expect(viewport?.zoom).toBe(0.15)
+    expect(viewport?.zoom).toBeLessThan(DEFAULT_ZOOM)
+  })
+
+  it('never magnifies past a hundred percent', () => {
+    const viewport = fitCanvasViewport([{ x: 0, y: 0, width: 20, height: 20 }], stage)
+    expect(viewport?.zoom).toBe(DEFAULT_ZOOM)
+  })
+
+  it('has no viewport for an empty board or an unmeasured stage', () => {
+    expect(fitCanvasViewport([], stage)).toBeNull()
+    expect(
+      fitCanvasViewport([{ x: 0, y: 0, width: 10, height: 10 }], { width: 0, height: 0 })
+    ).toBeNull()
+  })
+})
+
+describe('contentOutsideStage', () => {
+  const stage = { width: 1000, height: 500 }
+
+  it('is false while any card is on screen', () => {
+    const viewport = viewportAt(1, 9000, 9000)
+    expect(
+      contentOutsideStage(viewport, stage, [
+        { x: 9050, y: 9050, width: 200, height: 100 },
+        { x: 9000 + 5000, y: 9000, width: 100, height: 100 }
+      ])
+    ).toBe(false)
+  })
+
+  it('is true when the saved viewport points away from every card', () => {
+    const viewport = viewportAt(1, -540, 4079)
+    expect(
+      contentOutsideStage(viewport, stage, [{ x: 9580, y: 9580, width: 640, height: 400 }])
+    ).toBe(true)
+  })
+
+  it('is false for an empty board, which is not a broken view', () => {
+    expect(contentOutsideStage(viewportAt(1, -540, 4079), stage, [])).toBe(false)
   })
 })

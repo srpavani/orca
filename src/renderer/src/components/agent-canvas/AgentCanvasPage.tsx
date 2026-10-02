@@ -3,12 +3,7 @@ import { Minus, Plus } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import {
-  nextZoomLevel,
-  screenToWorld,
-  worldRectToScreen,
-  zoomAtPoint
-} from '../../../../shared/spatial-canvas/geometry'
+import { screenToWorld, worldRectToScreen } from '../../../../shared/spatial-canvas/geometry'
 import { buildFloorStack } from '../../../../shared/spatial-canvas/floor-stack'
 import { levelContents, levelsOf } from '../../../../shared/spatial-canvas/levels'
 import type {
@@ -35,7 +30,6 @@ import {
   removeCanvasNode,
   selectCanvasNode,
   setCanvasViewState,
-  setCanvasViewport,
   startCanvasHostSync,
   useAgentCanvas
 } from './agent-canvas-store'
@@ -56,6 +50,7 @@ import { AgentCanvasPromptDialog } from './AgentCanvasPromptDialog'
 import { openCanvasPrompt } from './agent-canvas-prompt'
 import { AgentCanvasRopes } from './AgentCanvasRopes'
 import { useAgentCanvasDraw } from './use-agent-canvas-draw'
+import { useCanvasViewControls } from './use-canvas-view-controls'
 import { useAgentCanvasGestures } from './use-agent-canvas-gestures'
 import { useAgentCanvasLivePanes } from './use-agent-canvas-live-panes'
 import { usePrefersReducedMotion } from './use-prefers-reduced-motion'
@@ -81,6 +76,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const activeLevelId = useAgentCanvas((state) => state.activeLevelId)
   const drawTool = useAgentCanvas((state) => state.drawTool)
   const floorOverview = useAgentCanvas((state) => state.floorOverview)
+  const loaded = useAgentCanvas((state) => state.loaded)
   const selectedNodeIds = useAgentCanvas((state) => state.selectedNodeIds)
   const [contextTarget, setContextTarget] = React.useState(EMPTY_CONTEXT_TARGET)
   const surfaceRef = React.useRef<HTMLDivElement | null>(null)
@@ -144,14 +140,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
     return screenToWorld(center, getAgentCanvasState().viewport)
   }
 
-  const zoomBy = (direction: 1 | -1): void => {
-    const surface = surfaceRef.current
-    const center = surface
-      ? { x: surface.clientWidth / 2, y: surface.clientHeight / 2 }
-      : { x: 0, y: 0 }
-    const current = getAgentCanvasState().viewport
-    setCanvasViewport(zoomAtPoint(current, nextZoomLevel(current.zoom, direction, null), center))
-  }
+  const { zoomBy, fitView } = useCanvasViewControls({ surfaceRef, cards, loaded })
 
   const addPortalAt = (at: { x: number; y: number }): void => {
     openCanvasPrompt({
@@ -371,10 +360,14 @@ export default function AgentCanvasPage(): React.JSX.Element {
           />
         ) : null}
         {/* Why outside the stack: the chrome must not tilt with the sheets. The
-            toolbar also hides in the overview, which is what the reference does —
+            toolbar also hides in the overview, which is what the reference does â€”
             the stack is a mode, and the stack's own list carries the actions. */}
         {floorOverview ? null : (
-          <div className="pointer-events-none absolute left-1/2 top-2 z-20 flex -translate-x-1/2 flex-col items-center gap-1.5">
+          // Why left-0/right-0 and not left-1/2 with a translate: a shrink-wrapped
+          // absolute box makes the toolbar's `max-w` resolve against itself, which
+          // pushed the toolbar into a horizontal scrollbar. Full width, centred
+          // content.
+          <div className="pointer-events-none absolute inset-x-0 top-2 z-20 flex flex-col items-center gap-1.5 px-3">
             <span className="text-xs font-medium text-muted-foreground">{activeFloorName}</span>
             <AgentCanvasLevelBar onAddPortal={addPortalAtCenter} />
           </div>
@@ -394,9 +387,17 @@ export default function AgentCanvasPage(): React.JSX.Element {
               >
                 <Minus className="size-3.5" />
               </button>
-              <span className="w-10 text-center text-[10px] tabular-nums text-muted-foreground">
+              <button
+                type="button"
+                title={translate(
+                  'auto.components.agentCanvas.fitView',
+                  'Fit the board to the window'
+                )}
+                className="pointer-events-auto w-10 shrink-0 rounded-full py-0.5 text-center text-[10px] tabular-nums text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+                onClick={fitView}
+              >
                 {Math.round(viewport.zoom * 100)}%
-              </span>
+              </button>
               <button
                 type="button"
                 className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"

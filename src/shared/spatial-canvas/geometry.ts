@@ -116,3 +116,82 @@ export function centerOnRect(
     }
   }
 }
+
+/** Bounding box around every rect, or null when there is nothing to frame. */
+export function contentBounds(rects: readonly CanvasRect[]): CanvasRect | null {
+  if (rects.length === 0) {
+    return null
+  }
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+  for (const rect of rects) {
+    minX = Math.min(minX, rect.x)
+    minY = Math.min(minY, rect.y)
+    maxX = Math.max(maxX, rect.x + rect.width)
+    maxY = Math.max(maxY, rect.y + rect.height)
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
+/**
+ * The largest discrete zoom at which `bounds` still fits the stage. Capped at
+ * 100%: fitting is for board state that is out of sight, and magnifying a lone
+ * card to 300% is not a view anyone asked for.
+ */
+function fitZoom(bounds: CanvasRect, available: { width: number; height: number }): number {
+  const limit = Math.min(
+    available.width / Math.max(bounds.width, 1),
+    available.height / Math.max(bounds.height, 1)
+  )
+  let zoom: number = MIN_ZOOM
+  for (const level of ZOOM_LEVELS) {
+    if (level <= limit && level <= DEFAULT_ZOOM) {
+      zoom = level
+    }
+  }
+  return zoom
+}
+
+/**
+ * A viewport that frames every rect, or null when there is nothing to frame.
+ * This is what makes the board self-healing: a viewport saved against a different
+ * layout (or a card placed outside it) would otherwise leave the canvas looking
+ * empty while the document is full.
+ */
+export function fitCanvasViewport(
+  rects: readonly CanvasRect[],
+  stage: { width: number; height: number },
+  padding = 80
+): CanvasViewport | null {
+  const bounds = contentBounds(rects)
+  if (bounds === null || stage.width <= 0 || stage.height <= 0) {
+    return null
+  }
+  const available = {
+    width: Math.max(stage.width - padding * 2, 1),
+    height: Math.max(stage.height - padding * 2, 1)
+  }
+  return centerOnRect(bounds, stage, fitZoom(bounds, available))
+}
+
+/** True when every rect falls outside the stage, so the board only looks empty. */
+export function contentOutsideStage(
+  viewport: CanvasViewport,
+  stage: { width: number; height: number },
+  rects: readonly CanvasRect[]
+): boolean {
+  if (rects.length === 0) {
+    return false
+  }
+  return rects.every((rect) => {
+    const screen = worldRectToScreen(rect, viewport)
+    return (
+      screen.x + screen.width < 0 ||
+      screen.y + screen.height < 0 ||
+      screen.x > stage.width ||
+      screen.y > stage.height
+    )
+  })
+}
