@@ -47,6 +47,7 @@ import { AgentCanvasHeader } from './AgentCanvasHeader'
 import { AgentCanvasLevelBar } from './AgentCanvasLevelBar'
 import { AgentCanvasNodeCard } from './AgentCanvasNodeCard'
 import { AgentCanvasPortalBody } from './AgentCanvasPortalBody'
+import { AgentCanvasGroups } from './AgentCanvasGroups'
 import { setCanvasNodesBlurred } from './agent-canvas-node-actions'
 import { AgentCanvasPromptDialog } from './AgentCanvasPromptDialog'
 import { openCanvasPrompt } from './agent-canvas-prompt'
@@ -305,6 +306,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
                 circuit={appearance.connectionStyle === 'circuit'}
                 onDisconnect={(edge) => disconnectCanvasEdge(edge.id)}
               />
+              <AgentCanvasGroups contents={floor} levelId={activeLevelId} viewport={viewport} />
               <AgentCanvasBridgeMarkers
                 document={document}
                 levelId={activeLevelId}

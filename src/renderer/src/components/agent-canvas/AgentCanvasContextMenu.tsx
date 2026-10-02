@@ -50,7 +50,7 @@ import {
   renameCanvasNodeTo,
   setCanvasNodeLock
 } from './agent-canvas-node-actions'
-import { AgentCanvasCardKindItems } from './AgentCanvasCardKindItems'
+import { AgentCanvasCardKindItems, AgentCanvasGroupItems } from './AgentCanvasCardKindItems'
 import { CANVAS_TERMINAL_PRESETS } from './agent-canvas-create-terminal'
 import { openNewTerminalSheet } from './agent-canvas-new-terminal'
 import { openCanvasPrompt } from './agent-canvas-prompt'
@@ -296,6 +296,7 @@ function CardMenu(props: {
           ))}
         </ContextMenuSubContent>
       </ContextMenuSub>
+      <AgentCanvasGroupItems targets={targets} />
       <ContextMenuSeparator />
       <ContextMenuItem onSelect={() => disconnectCanvasNodeWires(node.id)}>
         <Link2Off className="size-3.5" />

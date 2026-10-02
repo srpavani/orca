@@ -1,5 +1,13 @@
 import React from 'react'
-import { ClipboardCopy, Eye, EyeOff, PanelTopClose, PanelTopOpen } from 'lucide-react'
+import {
+  ClipboardCopy,
+  Eye,
+  EyeOff,
+  Group,
+  PanelTopClose,
+  PanelTopOpen,
+  Ungroup
+} from 'lucide-react'
 import { ContextMenuItem } from '@/components/ui/context-menu'
 import { translate } from '@/i18n/i18n'
 import { supportsRedaction } from '../../../../shared/spatial-canvas/node-display'
@@ -10,6 +18,7 @@ import {
   setCanvasNodesBlurred,
   toggleCanvasPortalChrome
 } from './agent-canvas-node-actions'
+import { anyNodeGrouped, groupNodes, ungroupNodes } from './agent-canvas-group-actions'
 
 /**
  * The card-menu items that only some kinds carry, in the reference's terms:
@@ -57,4 +66,35 @@ export function AgentCanvasCardKindItems(props: {
     )
   }
   return items.length === 0 ? null : <>{items}</>
+}
+
+/**
+ * Group / Ungroup, offered the way the reference offers them: Group when two or
+ * more cards are targeted, Ungroup when any of them already sits in a group.
+ */
+export function AgentCanvasGroupItems(props: {
+  targets: readonly CanvasNodeId[]
+}): React.JSX.Element | null {
+  const { targets } = props
+  const canGroup = targets.length >= 2
+  const canUngroup = anyNodeGrouped(targets)
+  if (!canGroup && !canUngroup) {
+    return null
+  }
+  return (
+    <>
+      {canGroup ? (
+        <ContextMenuItem onSelect={() => groupNodes(targets)}>
+          <Group className="size-3.5" />
+          {translate('auto.components.agentCanvas.group', 'Group')}
+        </ContextMenuItem>
+      ) : null}
+      {canUngroup ? (
+        <ContextMenuItem onSelect={() => ungroupNodes(targets)}>
+          <Ungroup className="size-3.5" />
+          {translate('auto.components.agentCanvas.ungroup', 'Ungroup')}
+        </ContextMenuItem>
+      ) : null}
+    </>
+  )
 }

@@ -17603,7 +17603,20 @@
         "blur": "Blur",
         "copyContents": "Copy contents",
         "showChrome": "Show toolbar",
-        "hideChrome": "Hide toolbar"
+        "hideChrome": "Hide toolbar",
+        "group": "Group",
+        "ungroup": "Ungroup",
+        "noteColorYellow": "Yellow",
+        "noteColorPink": "Pink",
+        "noteColorBlue": "Blue",
+        "noteColorGreen": "Green",
+        "noteColorOrange": "Orange",
+        "noteColorPurple": "Purple",
+        "groupUntitled": "Group",
+        "color": "Color",
+        "groupColorNeutral": "Neutral",
+        "groupRename": "Rename group",
+        "groupRenameLabel": "Group name"
       }
     },
     "i18n": {

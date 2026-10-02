@@ -179,10 +179,10 @@ export function removeNode(document: CanvasDocument, nodeId: CanvasNodeId): Canv
       ties: contents.ties
         .map((tie) => ({ ...tie, edgeIds: tie.edgeIds.filter((id) => liveEdgeIds.has(id)) }))
         .filter((tie) => tie.edgeIds.length > 0),
-      groups: contents.groups.map((group) => ({
-        ...group,
-        nodeIds: group.nodeIds.filter((id) => id !== nodeId)
-      }))
+      // Why the length filter: a group of one is not a group (the reference prunes it).
+      groups: contents.groups
+        .map((group) => ({ ...group, nodeIds: group.nodeIds.filter((id) => id !== nodeId) }))
+        .filter((group) => group.nodeIds.length >= 2)
     }
   })
   return {
