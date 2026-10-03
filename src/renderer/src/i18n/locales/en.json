@@ -17648,7 +17648,16 @@
         "selectionBar": "Selection",
         "selectedCount": "{{count}} selected",
         "deleteSelected": "Delete selected",
-        "clearSelection": "Clear selection"
+        "clearSelection": "Clear selection",
+        "noteTitle": "Note",
+        "cardTitle": "Card",
+        "connections": "Connections",
+        "removeAllConnections": "Remove all",
+        "removeConnection": "Remove connection",
+        "cardToolbar": "Card actions",
+        "connectPickTarget": "Click another card to connect",
+        "connect": "Connect",
+        "openSession": "Open terminal"
       }
     },
     "i18n": {

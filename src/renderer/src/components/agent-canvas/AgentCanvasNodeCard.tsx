@@ -22,6 +22,10 @@ type AgentCanvasNodeCardProps = {
   selected: boolean
   /** Part of a selection of two or more: marked plainly whatever the selection style. */
   multiSelected?: boolean
+  /** The only selected card: the active window, glowing so it stands apart. */
+  focused?: boolean
+  /** Connect mode is waiting and this card could be the other end. */
+  connectTarget?: boolean
   wiringSource: boolean
   live: boolean
   /** The session's live agent status, as the rest of Orca reports it. */
@@ -202,7 +206,7 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
         // selected card, and the user picks one for the whole canvas.
         // Why no shadow utility while multi-selected: utilities outrank the plain
         // class, and canvas-node-multiselected owns the box-shadow (edge, halo, lift).
-        props.multiSelected
+        props.multiSelected || props.focused
           ? null
           : selected && props.selection.boxShadow === 'elevated'
             ? 'canvas-node-shadow-selected'
@@ -217,6 +221,8 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
         // Why its own mark: the board's selection style can be as quiet as a lifted
         // shadow, which tells one card apart but not which ten a rectangle caught.
         props.multiSelected && 'canvas-node-multiselected',
+        props.focused && 'canvas-node-focused',
+        props.connectTarget && 'canvas-node-connect-target',
         wiringSource && !props.multiSelected && 'ring-2 ring-canvas-accent'
       )}
       style={{

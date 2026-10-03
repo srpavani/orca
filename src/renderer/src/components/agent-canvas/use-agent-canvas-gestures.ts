@@ -220,6 +220,13 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
       if (!surface || event.button > 1) {
         return
       }
+      // Why: dialogs and menus are portalled to <body>, but React still bubbles their
+      // pointerdown up the component tree to this board. Treating that press as a
+      // board press called preventDefault and blur, so a dialog's text field could
+      // never take focus. Only presses whose DOM target is really on the board count.
+      if (!(event.target instanceof Node) || !surface.contains(event.target)) {
+        return
+      }
       const start = localPoint(event, surface)
       if (event.button === 1 || spaceRef.current) {
         gestureRef.current = { type: 'pan', last: start }

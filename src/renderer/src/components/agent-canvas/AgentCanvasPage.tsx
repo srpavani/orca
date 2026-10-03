@@ -1,5 +1,4 @@
 import React from 'react'
-import { Minus, Plus } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
@@ -58,6 +57,9 @@ import { usePrefersReducedMotion } from './use-prefers-reduced-motion'
 import { useFloorOverviewKeys } from './use-floor-overview-keys'
 import { useAgentCanvasKeys } from './use-agent-canvas-keys'
 import { AgentCanvasSelectionBar } from './AgentCanvasSelectionBar'
+import { AgentCanvasNodeToolbar } from './AgentCanvasNodeToolbar'
+import { AgentCanvasZoomControl } from './AgentCanvasZoomControl'
+import { useCanvasConnectMode, useCanvasConnectingFrom } from './agent-canvas-connect-mode'
 import { useStageHeight } from './use-stage-height'
 
 /**
@@ -94,6 +96,8 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const stageHeight = useStageHeight(surfaceRef)
   const prefersReducedMotion = usePrefersReducedMotion()
   useFloorOverviewKeys()
+  useCanvasConnectMode(surfaceRef)
+  const connectingFrom = useCanvasConnectingFrom()
   // Why the same source the tab bar uses: a card must not disagree with the
   // rest of Orca about whether its agent is working.
   const layouts = useAppStore((state) => state.terminalLayoutsByTabId)
@@ -119,7 +123,9 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const floor = levelContents(document, activeLevelId) ?? document.root
   const nodes = [...floor.nodes].sort((left, right) => left.zIndex - right.zIndex)
   // Why: bridge markers draw as pills on both floors (AgentCanvasBridgeMarkers), not as cards.
-  const cards = nodes.filter((node) => !isDrawingNode(node) && node.content.kind !== 'bridge')
+  const cards = nodes.filter((node) => !isDrawingNode(node) && node.content.kind !== 'bridge') // The reference's contextual toolbar shows for exactly one selected card.
+  const selectedCard =
+    selectedNodeIds.length === 1 ? cards.find((node) => node.id === selectedNodeIds[0]) : undefined
 
   // The stack's geometry needs every floor, not just the live one: the sheets above
   // and below are what the overview exists to show.
@@ -233,6 +239,11 @@ export default function AgentCanvasPage(): React.JSX.Element {
             : { backgroundColor: 'var(--color-canvas-surface)' }
         }
         onPointerDown={(event) => {
+          // Why: a press inside a portalled dialog or menu bubbles here through React,
+          // though it never touched the board.
+          if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) {
+            return
+          }
           // Why a click closes the stack: a tilted sheet must not pan or draw, and
           // the reference treats the overview as something you step out of.
           if (floorOverview) {
@@ -291,6 +302,8 @@ export default function AgentCanvasPage(): React.JSX.Element {
                   zoom={viewport.zoom}
                   selected={selectedNodeIds.includes(node.id)}
                   multiSelected={selectedNodeIds.length > 1 && selectedNodeIds.includes(node.id)}
+                  focused={selectedNodeIds.length === 1 && selectedNodeIds[0] === node.id}
+                  connectTarget={connectingFrom !== null && connectingFrom !== node.id}
                   wiringSource={gestures.pendingWire?.fromNode.id === node.id}
                   live={node.content.kind === 'session' && liveById.has(node.content.sessionId)}
                   agentState={cardAgentState(agentStatusForNode(node, layouts, statusByPaneKey))}
@@ -369,40 +382,18 @@ export default function AgentCanvasPage(): React.JSX.Element {
           document={document}
           stageHeight={stageHeight}
           trailing={
-            // Why one row with the pill: the reference keeps the zoom beside the
-            // floor control, and two groups in the same corner would overlap.
-            <div className="canvas-glass pointer-events-auto flex h-[34px] items-center gap-0.5 rounded-full px-1.5">
-              <button
-                type="button"
-                className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-                aria-label={translate('auto.components.agentCanvas.zoomOut', 'Zoom out')}
-                onClick={() => zoomBy(-1)}
-              >
-                <Minus className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                title={translate(
-                  'auto.components.agentCanvas.fitView',
-                  'Fit the board to the window'
-                )}
-                className="pointer-events-auto w-10 shrink-0 rounded-full py-0.5 text-center text-[10px] tabular-nums text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-                onClick={fitView}
-              >
-                {Math.round(viewport.zoom * 100)}%
-              </button>
-              <button
-                type="button"
-                className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-                aria-label={translate('auto.components.agentCanvas.zoomIn', 'Zoom in')}
-                onClick={() => zoomBy(1)}
-              >
-                <Plus className="size-3.5" />
-              </button>
-            </div>
+            <AgentCanvasZoomControl zoom={viewport.zoom} onZoomBy={zoomBy} onFit={fitView} />
           }
         />
         {floorOverview ? null : <AgentCanvasSelectionBar />}
+        {!floorOverview && selectedCard ? (
+          <AgentCanvasNodeToolbar
+            node={selectedCard}
+            nodes={cards}
+            viewport={viewport}
+            onOpen={openNode}
+          />
+        ) : null}
         <AgentCanvasPromptDialog />
         <AgentCanvasNewTerminalDialog />
         <AgentCanvasNewFloorDialog />
