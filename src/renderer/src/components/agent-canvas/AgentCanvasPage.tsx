@@ -56,6 +56,8 @@ import { useAgentCanvasGestures } from './use-agent-canvas-gestures'
 import { useAgentCanvasLivePanes } from './use-agent-canvas-live-panes'
 import { usePrefersReducedMotion } from './use-prefers-reduced-motion'
 import { useFloorOverviewKeys } from './use-floor-overview-keys'
+import { useAgentCanvasKeys } from './use-agent-canvas-keys'
+import { AgentCanvasSelectionBar } from './AgentCanvasSelectionBar'
 import { useStageHeight } from './use-stage-height'
 
 /**
@@ -211,35 +213,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
     closeCanvasPage()
   }
 
-  React.useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      const target = event.target as HTMLElement | null
-      // Why: keys typed into a live terminal, note or portal belong to it, not the canvas.
-      if (
-        target?.matches(
-          'input, textarea, select, [contenteditable="true"], [contenteditable=""]'
-        ) ||
-        target?.closest('[data-canvas-live-pane]')
-      ) {
-        return
-      }
-      const state = getAgentCanvasState()
-      if ((event.key === 'Delete' || event.key === 'Backspace') && state.selectedNodeId) {
-        event.preventDefault()
-        removeCanvasNode(state.selectedNodeId)
-      } else if (event.key === 'Escape') {
-        if (state.drawTool) {
-          setCanvasViewState({ drawTool: null })
-        } else if (state.selectedNodeId) {
-          selectCanvasNode(null)
-        } else {
-          closeCanvasPage()
-        }
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [closeCanvasPage])
+  useAgentCanvasKeys(closeCanvasPage)
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -315,6 +289,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
                   screen={worldRectToScreen(node.frame, viewport)}
                   zoom={viewport.zoom}
                   selected={selectedNodeIds.includes(node.id)}
+                  multiSelected={selectedNodeIds.length > 1 && selectedNodeIds.includes(node.id)}
                   wiringSource={gestures.pendingWire?.fromNode.id === node.id}
                   live={node.content.kind === 'session' && liveById.has(node.content.sessionId)}
                   agentState={cardAgentState(agentStatusForNode(node, layouts, statusByPaneKey))}
@@ -426,6 +401,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
             </div>
           }
         />
+        {floorOverview ? null : <AgentCanvasSelectionBar />}
         <AgentCanvasPromptDialog />
         <AgentCanvasNewTerminalDialog />
         <AgentCanvasNewFloorDialog />

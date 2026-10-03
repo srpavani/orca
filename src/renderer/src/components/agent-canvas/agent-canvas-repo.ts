@@ -69,3 +69,46 @@ export function useRepoHasCommits(repoPath: string | null): boolean | null {
   }, [repoPath])
   return answer !== null && answer.path === repoPath ? answer.value : null
 }
+
+type WorktreeRow = { id: string; branch?: string | null; isMainWorktree?: boolean }
+
+function bareBranch(branch: string | null | undefined): string {
+  return (branch ?? '').replace(/^refs\/heads\//, '')
+}
+
+/**
+ * Where a terminal created on a floor runs, as the reference opens it in the
+ * floor's own directory: a floor pinned to a branch uses that branch's
+ * worktree; the ground floor (or a plain floor) uses the active worktree, then
+ * the canvas repository's main worktree. Null only when Orca has no worktree
+ * at all, which is the one case that really needs a workspace opened first.
+ */
+export function floorWorktreeIdFrom(
+  state: Omit<RepoLookup, 'worktreesByRepo'> & {
+    worktreesByRepo: Readonly<Record<string, readonly WorktreeRow[]>>
+  },
+  floorBranch: string | null
+): string | null {
+  const repoId = canvasRepoIdFrom(state)
+  const rows = repoId === null ? [] : (state.worktreesByRepo[repoId] ?? [])
+  if (floorBranch !== null) {
+    const wanted = bareBranch(floorBranch)
+    const pinned = rows.find((row) => bareBranch(row.branch) === wanted)
+    if (pinned) {
+      return pinned.id
+    }
+  }
+  if (state.activeWorktreeId !== null) {
+    return state.activeWorktreeId
+  }
+  const main = rows.find((row) => row.isMainWorktree === true) ?? rows[0]
+  if (main) {
+    return main.id
+  }
+  for (const all of Object.values(state.worktreesByRepo)) {
+    if (all[0]) {
+      return all[0].id
+    }
+  }
+  return null
+}

@@ -17644,7 +17644,11 @@
         "noteColorCharcoal": "Charcoal",
         "noteColorSlate": "Slate",
         "noteColorMidnight": "Midnight",
-        "isolationNoCommits": "{{directory}} has no commits yet. Make a first commit, then a floor can branch from it."
+        "isolationNoCommits": "{{directory}} has no commits yet. Make a first commit, then a floor can branch from it.",
+        "selectionBar": "Selection",
+        "selectedCount": "{{count}} selected",
+        "deleteSelected": "Delete selected",
+        "clearSelection": "Clear selection"
       }
     },
     "i18n": {

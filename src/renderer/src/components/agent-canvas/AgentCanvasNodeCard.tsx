@@ -20,6 +20,8 @@ type AgentCanvasNodeCardProps = {
   screen: CanvasRect
   zoom: number
   selected: boolean
+  /** Part of a selection of two or more: marked plainly whatever the selection style. */
+  multiSelected?: boolean
   wiringSource: boolean
   live: boolean
   /** The session's live agent status, as the rest of Orca reports it. */
@@ -208,7 +210,9 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
         isNote ? NOTE_PAPER_CLASS[noteColor(node)] : 'bg-card text-card-foreground',
         isText && 'bg-transparent shadow-none ring-1 ring-foreground/15',
         locked && 'opacity-80',
-        wiringSource && 'ring-2 ring-canvas-accent'
+        // Why its own mark: the board's selection style can be as quiet as a lifted
+        // shadow, which tells one card apart but not which ten a rectangle caught.
+        (wiringSource || props.multiSelected) && 'ring-2 ring-canvas-accent'
       )}
       style={{
         left: 0,

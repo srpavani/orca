@@ -4,6 +4,7 @@ import { useAppStore } from '@/store'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import { getAgentCanvasState, placeCanvasSessionAt } from './agent-canvas-store'
 import { openCanvasPrompt } from './agent-canvas-prompt'
+import { floorWorktreeIdFrom } from './agent-canvas-repo'
 
 export type CanvasTerminalPreset = {
   /** Omitted runs the user's default shell. */
@@ -49,7 +50,11 @@ export type CanvasTerminalCreated = {
 export async function createCanvasTerminal(
   spec: CanvasTerminalSpec
 ): Promise<CanvasTerminalCreated | null> {
-  const worktreeId = useAppStore.getState().activeWorktreeId
+  // Why the floor decides: a terminal belongs to the floor it is created on, so it
+  // runs in that floor's checkout — not in whichever worktree the sidebar last had.
+  const { document, activeLevelId } = getAgentCanvasState()
+  const floorBranch = document.levels.find((level) => level.id === activeLevelId)?.branch ?? null
+  const worktreeId = floorWorktreeIdFrom(useAppStore.getState(), floorBranch)
   if (!worktreeId) {
     openCanvasPrompt({
       kind: 'notice',
