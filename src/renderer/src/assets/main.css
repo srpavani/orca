@@ -669,6 +669,58 @@ body:has(> [data-slot='dialog-overlay'], > [data-slot='sheet-overlay']) {
   box-shadow: var(--canvas-node-shadow-selected);
 }
 
+/* A card in a multiple selection, n8n style: a solid accent edge plus a soft
+   accent halo that breathes, over the card's own lift — so every card a
+   rectangle caught reads as picked at a glance, on any background. */
+@keyframes canvas-node-halo {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px var(--canvas-accent),
+      0 0 0 6px var(--canvas-accent-soft),
+      var(--canvas-node-shadow-selected);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 2px var(--canvas-accent),
+      0 0 0 10px var(--canvas-accent-soft),
+      var(--canvas-node-shadow-selected);
+  }
+}
+
+.canvas-node-multiselected {
+  box-shadow:
+    0 0 0 2px var(--canvas-accent),
+    0 0 0 6px var(--canvas-accent-soft),
+    var(--canvas-node-shadow-selected);
+  animation: canvas-node-halo 1.8s ease-in-out infinite;
+}
+
+/* A drawing in a multiple selection: the same accent glow, breathing in step. */
+@keyframes canvas-drawing-halo {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px var(--canvas-accent));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 6px var(--canvas-accent));
+  }
+}
+
+.canvas-drawing-multiselected {
+  filter: drop-shadow(0 0 2px var(--canvas-accent));
+  animation: canvas-drawing-halo 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-node-multiselected,
+  .canvas-drawing-multiselected {
+    animation: none;
+  }
+}
+
 @utility canvas-floor-shadow {
   box-shadow: var(--canvas-floor-shadow);
 }

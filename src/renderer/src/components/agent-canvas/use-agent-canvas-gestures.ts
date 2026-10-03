@@ -178,7 +178,12 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
     // Why: wheel must be non-passive to stop the page scrolling under the canvas.
     const onWheel = (event: WheelEvent): void => {
       event.preventDefault()
-      const { viewport } = getAgentCanvasState()
+      const { viewport, floorOverview } = getAgentCanvasState()
+      // Why: in the floor stack the wheel changes floors (use-floor-overview-keys); it
+      // must never also pan the tilted board underneath.
+      if (floorOverview) {
+        return
+      }
       if (event.ctrlKey || event.metaKey) {
         // Trackpad pinch arrives as ctrl+wheel with small deltas; scale proportionally.
         const step = Math.min(Math.abs(event.deltaY), 25)

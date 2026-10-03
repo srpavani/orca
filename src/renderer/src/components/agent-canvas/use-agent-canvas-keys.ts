@@ -17,7 +17,8 @@ import { copyCanvasSelectionNow, deleteCanvasSelection } from './agent-canvas-se
 export function useAgentCanvasKeys(closeCanvasPage: () => void): void {
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      const target = event.target as HTMLElement | null
+      // Why the instanceof: a key event can target the window itself, which has no matches().
+      const target = event.target instanceof Element ? event.target : null
       if (
         target?.matches(
           'input, textarea, select, [contenteditable="true"], [contenteditable=""]'

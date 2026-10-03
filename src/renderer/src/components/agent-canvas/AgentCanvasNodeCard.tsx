@@ -200,9 +200,13 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
         'absolute flex flex-col overflow-hidden rounded-xl',
         // Why the paint comes from the board: the reference offers five ways to show a
         // selected card, and the user picks one for the whole canvas.
-        selected && props.selection.boxShadow === 'elevated'
-          ? 'canvas-node-shadow-selected'
-          : 'canvas-node-shadow',
+        // Why no shadow utility while multi-selected: utilities outrank the plain
+        // class, and canvas-node-multiselected owns the box-shadow (edge, halo, lift).
+        props.multiSelected
+          ? null
+          : selected && props.selection.boxShadow === 'elevated'
+            ? 'canvas-node-shadow-selected'
+            : 'canvas-node-shadow',
         selected &&
           props.selection.border === 'dashed' &&
           'border border-dashed border-canvas-accent',
@@ -212,7 +216,8 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
         locked && 'opacity-80',
         // Why its own mark: the board's selection style can be as quiet as a lifted
         // shadow, which tells one card apart but not which ten a rectangle caught.
-        (wiringSource || props.multiSelected) && 'ring-2 ring-canvas-accent'
+        props.multiSelected && 'canvas-node-multiselected',
+        wiringSource && !props.multiSelected && 'ring-2 ring-canvas-accent'
       )}
       style={{
         left: 0,

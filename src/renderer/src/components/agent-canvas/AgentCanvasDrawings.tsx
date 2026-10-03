@@ -55,6 +55,8 @@ export function AgentCanvasDrawings(props: {
   draft: CanvasShape | null
   draftOrigin: CanvasPoint | null
   selectedNodeId: string | null
+  /** Every selected id, so a drawing caught by a rectangle glows like a card does. */
+  selectedNodeIds?: readonly string[]
   onSelect: (node: CanvasNode) => void
 }): React.JSX.Element {
   const { viewport } = props
@@ -77,9 +79,12 @@ export function AgentCanvasDrawings(props: {
         <g
           key={node.id}
           className={
-            node.id === props.selectedNodeId
-              ? 'pointer-events-auto cursor-pointer stroke-canvas-accent'
-              : 'pointer-events-auto cursor-pointer stroke-canvas-rope'
+            (props.selectedNodeIds ?? []).length > 1 &&
+            (props.selectedNodeIds ?? []).includes(node.id)
+              ? 'pointer-events-auto cursor-pointer stroke-canvas-accent canvas-drawing-multiselected'
+              : node.id === props.selectedNodeId
+                ? 'pointer-events-auto cursor-pointer stroke-canvas-accent'
+                : 'pointer-events-auto cursor-pointer stroke-canvas-rope'
           }
           fill="none"
           strokeWidth={2}

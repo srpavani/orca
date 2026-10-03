@@ -265,6 +265,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
                 draft={draw.draft?.shape ?? null}
                 draftOrigin={draw.draft?.origin ?? null}
                 selectedNodeId={selectedNodeId}
+                selectedNodeIds={selectedNodeIds}
                 onSelect={(target) => selectCanvasNode(target.id)}
               />
               <AgentCanvasRopes

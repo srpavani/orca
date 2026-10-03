@@ -23,6 +23,22 @@ function insideFloorList(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('[data-floor-sidebar]') !== null
 }
 
+/** One gesture memory for the whole app, however many times the page mounts. */
+const scroll = createFloorScrollSwitch(() => performance.now())
+const handledWheels = new WeakSet<WheelEvent>()
+
+/** True when the wheel is over the floor list and the list has room to scroll that way. */
+function listCanScroll(target: EventTarget | null, deltaY: number): boolean {
+  const list =
+    target instanceof Element ? target.closest('[data-floor-sidebar] .overflow-y-auto') : null
+  if (!(list instanceof HTMLElement) || list.scrollHeight <= list.clientHeight + 1) {
+    return false
+  }
+  return deltaY < 0
+    ? list.scrollTop > 0
+    : list.scrollTop + list.clientHeight < list.scrollHeight - 1
+}
+
 /** Moves the live floor `delta` steps up (+1) or down (-1) the stack. */
 function stepFloor(delta: number): void {
   const { document, activeLevelId } = getAgentCanvasState()
@@ -79,16 +95,25 @@ export function useFloorOverviewKeys(): void {
         setCanvasViewState({ floorOverview: false })
       }
     }
-    const scroll = createFloorScrollSwitch(() => performance.now())
     const onWheel = (event: WheelEvent): void => {
-      if (!getAgentCanvasState().floorOverview || insideFloorList(event.target)) {
+      if (!getAgentCanvasState().floorOverview || document.querySelector('[role=dialog]')) {
         return
       }
-      if (document.querySelector('[role=dialog]')) {
+      // Why the list only keeps the wheel when it can still scroll that way: a long
+      // stack must stay reachable, but over a short list (or the pill) the wheel is
+      // the floor switch — it used to fall through and pan the board instead.
+      if (listCanScroll(event.target, event.deltaY)) {
+        event.stopPropagation()
         return
       }
       event.preventDefault()
       event.stopPropagation()
+      // Why the event is marked: if this page is ever mounted twice, the second
+      // listener must not count the same notch again (one notch, one floor).
+      if (handledWheels.has(event)) {
+        return
+      }
+      handledWheels.add(event)
       const direction = scroll.handle(event)
       if (direction !== null) {
         stepFloor(direction)
