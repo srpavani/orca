@@ -3,32 +3,51 @@ import {
   nextZoomLevel,
   panBy,
   screenToWorld,
+  worldToScreen,
   zoomAtPoint
 } from '../../../../shared/spatial-canvas/geometry'
-import { nodesCoveringPoint, nodesIntersectingRect } from '../../../../shared/spatial-canvas/levels'
-import type { CanvasNode, CanvasPoint, CanvasRect } from '../../../../shared/spatial-canvas/types'
+import { levelContents, nodesCoveringPoint } from '../../../../shared/spatial-canvas/levels'
+import {
+  MARQUEE_MIN_PX,
+  combineSelection,
+  dragSet,
+  draggedPositions,
+  marqueeHits,
+  rectBetween
+} from '../../../../shared/spatial-canvas/marquee'
+import type {
+  CanvasLevelContents,
+  CanvasNode,
+  CanvasPoint,
+  CanvasRect
+} from '../../../../shared/spatial-canvas/types'
 import {
   connectCanvasNodes,
   getAgentCanvasState,
-  moveCanvasNode,
   selectCanvasNode,
   selectCanvasNodes,
   setCanvasViewport,
   toggleCanvasNodeSelection
 } from './agent-canvas-store'
+import { moveCanvasNodes } from './agent-canvas-group-actions'
 
 type Gesture =
   | { type: 'pan'; last: CanvasPoint }
-  | { type: 'drag'; nodeId: string; grabOffset: CanvasPoint; moved: boolean }
+  | { type: 'drag'; grabWorld: CanvasPoint; origins: Map<string, CanvasPoint>; moved: boolean }
   | { type: 'wire'; fromNode: CanvasNode }
-  | { type: 'marquee'; start: CanvasPoint; current: CanvasPoint; additive: boolean }
+  | {
+      type: 'marquee'
+      start: CanvasPoint
+      /** Where the press landed in world space, fixed so a pan or zoom mid-drag cannot shift it. */
+      startWorld: CanvasPoint
+      additive: boolean
+      /** What was selected when the press began, so shift adds to it rather than to itself. */
+      before: readonly string[]
+    }
 
 export type PendingWire = { fromNode: CanvasNode; cursor: CanvasPoint } | null
 /** Screen-space rectangle the user is dragging to select several nodes at once. */
 export type MarqueeRect = CanvasRect | null
-
-/** A drag shorter than this stays a click, so releasing in place does not rubber-band. */
-const MARQUEE_MIN_PX = 4
 
 function localPoint(
   event: { clientX: number; clientY: number },
@@ -38,13 +57,10 @@ function localPoint(
   return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
 }
 
-function rectBetween(start: CanvasPoint, end: CanvasPoint): CanvasRect {
-  return {
-    x: Math.min(start.x, end.x),
-    y: Math.min(start.y, end.y),
-    width: Math.abs(end.x - start.x),
-    height: Math.abs(end.y - start.y)
-  }
+/** The floor in view: the rectangle and a drag only ever touch cards on it. */
+function activeFloor(): CanvasLevelContents {
+  const { document, activeLevelId } = getAgentCanvasState()
+  return levelContents(document, activeLevelId) ?? document.root
 }
 
 /**
@@ -105,13 +121,17 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
       } else if (gesture.type === 'drag') {
         const world = screenToWorld(point, viewport)
         gestureRef.current = { ...gesture, moved: true }
-        moveCanvasNode(gesture.nodeId, {
-          x: world.x - gesture.grabOffset.x,
-          y: world.y - gesture.grabOffset.y
-        })
+        moveCanvasNodes(
+          draggedPositions(gesture.origins, {
+            x: world.x - gesture.grabWorld.x,
+            y: world.y - gesture.grabWorld.y
+          })
+        )
       } else if (gesture.type === 'marquee') {
-        gestureRef.current = { ...gesture, current: point }
-        setMarquee(rectBetween(gesture.start, point))
+        // Why the start is re-projected: the box is drawn in screen space, and a wheel
+        // pan during the drag moves where the world-anchored start now sits.
+        const anchor = worldToScreen(gesture.startWorld, viewport)
+        setMarquee(rectBetween(anchor, point))
       } else {
         setPendingWire({ fromNode: gesture.fromNode, cursor: point })
       }
@@ -121,23 +141,22 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
       gestureRef.current = null
       if (gesture?.type === 'marquee') {
         setMarquee(null)
-        const box = rectBetween(gesture.start, localPoint(event, surface))
-        const { document, viewport, selectedNodeIds } = getAgentCanvasState()
+        const end = localPoint(event, surface)
+        const { viewport } = getAgentCanvasState()
+        const anchor = worldToScreen(gesture.startWorld, viewport)
+        const box = rectBetween(anchor, end)
         if (box.width < MARQUEE_MIN_PX && box.height < MARQUEE_MIN_PX) {
-          // A click, not a drag: clearing is the whole intent.
-          selectCanvasNode(null)
+          // A click, not a drag: clearing is the intent, unless shift asked to keep it.
+          if (!gesture.additive) {
+            selectCanvasNode(null)
+          }
           return
         }
-        const world = {
-          x: viewport.origin.x + box.x / viewport.zoom,
-          y: viewport.origin.y + box.y / viewport.zoom,
-          width: box.width / viewport.zoom,
-          height: box.height / viewport.zoom
-        }
-        const inside = nodesIntersectingRect(document, world)
-          .filter((node) => node.locked !== true)
-          .map((node) => node.id)
-        selectCanvasNodes(gesture.additive ? [...selectedNodeIds, ...inside] : inside)
+        const hits = marqueeHits(
+          activeFloor(),
+          rectBetween(gesture.startWorld, screenToWorld(end, viewport))
+        )
+        selectCanvasNodes(combineSelection(gesture.before, hits, gesture.additive))
         return
       }
       if (gesture?.type !== 'wire') {
@@ -146,9 +165,11 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
       setPendingWire(null)
       const { document, viewport } = getAgentCanvasState()
       const world = screenToWorld(localPoint(event, surface), viewport)
-      // Draw order puts the topmost node last.
+      // Draw order puts the topmost node last. Only the floor in view counts: a card
+      // hidden on another floor must not catch a wire dropped where it would be.
+      const onFloor = new Set(activeFloor().nodes.map((node) => node.id))
       const target = nodesCoveringPoint(document, world).findLast(
-        (node) => node.id !== gesture.fromNode.id
+        (node) => node.id !== gesture.fromNode.id && onFloor.has(node.id)
       )
       if (target) {
         connectCanvasNodes(gesture.fromNode.id, target.id)
@@ -167,12 +188,21 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
       }
       setCanvasViewport(panBy(viewport, { x: -event.deltaX, y: -event.deltaY }))
     }
+    // Why: a cancelled pointer (alt-tab, touch interrupted) must not leave a
+    // half-drawn rectangle or a card glued to the cursor.
+    const onCancel = (): void => {
+      gestureRef.current = null
+      setMarquee(null)
+      setPendingWire(null)
+    }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onCancel)
     surface.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onCancel)
       surface.removeEventListener('wheel', onWheel)
     }
   }, [surfaceRef])
@@ -190,11 +220,22 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
         gestureRef.current = { type: 'pan', last: start }
         return
       }
+      // Why the reference does this too: a focused input (a note, a terminal) would
+      // otherwise keep the keyboard, and the drag would select its text instead.
+      if (
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement !== document.body
+      ) {
+        document.activeElement.blur()
+      }
+      event.preventDefault()
+      const state = getAgentCanvasState()
       gestureRef.current = {
         type: 'marquee',
         start,
-        current: start,
-        additive: event.shiftKey
+        startWorld: screenToWorld(start, state.viewport),
+        additive: event.shiftKey,
+        before: state.selectedNodeIds
       }
     },
     [surfaceRef]
@@ -216,14 +257,19 @@ export function useAgentCanvasGestures(surfaceRef: React.RefObject<HTMLDivElemen
         toggleCanvasNodeSelection(node.id)
         return
       }
-      selectCanvasNode(node.id)
-      const world = screenToWorld(localPoint(event, surface), getAgentCanvasState().viewport)
+      const state = getAgentCanvasState()
+      // Why the selection is kept: grabbing one of several selected cards moves them
+      // all, as the reference does; grabbing an unselected card selects just it.
+      const selected = state.selectedNodeIds.includes(node.id) ? state.selectedNodeIds : [node.id]
+      if (selected.length === 1) {
+        selectCanvasNode(node.id)
+      }
       gestureRef.current = {
         type: 'drag',
-        nodeId: node.id,
         // Why the body is not used: dragging a card by its body would fight the
         // text caret, the live terminal and the portal frame inside it.
-        grabOffset: { x: world.x - node.frame.x, y: world.y - node.frame.y },
+        grabWorld: screenToWorld(localPoint(event, surface), state.viewport),
+        origins: dragSet(activeFloor(), node.id, selected),
         moved: false
       }
     },

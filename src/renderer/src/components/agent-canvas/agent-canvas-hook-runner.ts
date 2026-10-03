@@ -10,6 +10,7 @@ import {
 import type { CanvasLevelId } from '../../../../shared/spatial-canvas/types'
 import { findBranchWorktree } from './agent-canvas-branch-floor'
 import { getAgentCanvasState } from './agent-canvas-store'
+import { canvasRepoId } from './agent-canvas-repo'
 
 const LOCAL_RUNTIME = { kind: 'local' } as const
 
@@ -39,7 +40,7 @@ export async function runFloorHooks(
   const level = levelId === null ? null : document.levels.find((entry) => entry.id === levelId)
   const branch = level?.branch ?? null
   const app = useAppStore.getState()
-  const repoId = app.activeRepoId
+  const repoId = canvasRepoId()
   const worktree =
     repoId !== null && branch !== null
       ? findBranchWorktree(app.worktreesByRepo, repoId, branch)

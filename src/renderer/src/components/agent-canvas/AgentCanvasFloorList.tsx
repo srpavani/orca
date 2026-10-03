@@ -49,17 +49,25 @@ export function AgentCanvasFloorList(props: {
   )
 
   return (
-    <div className="pointer-events-none absolute bottom-4 right-4 z-30 flex flex-col items-end gap-2">
+    <div
+      className="pointer-events-none absolute bottom-4 right-4 z-30 flex flex-col items-end gap-2"
+      // Why: this chrome sits inside the board surface, whose pointerdown closes the
+      // floor stack. Without this a press on New floor (or any row) closed and
+      // unmounted the list before its click could land, so nothing happened.
+      onPointerDown={(event) => event.stopPropagation()}
+    >
       {overview ? (
         <div
           className="canvas-glass pointer-events-auto flex w-56 flex-col overflow-hidden rounded-2xl p-2"
           style={{ maxHeight }}
           role="listbox"
+          data-floor-sidebar=""
           aria-label={translate('auto.components.agentCanvas.floorsTitle', 'Floors')}
         >
           <button
             type="button"
-            className="mb-1 flex shrink-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left text-xs font-medium text-canvas-accent hover:bg-foreground/5"
+            className="agent-canvas-floor-item mb-1 flex shrink-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left text-xs font-medium text-canvas-accent hover:bg-foreground/5"
+            style={floorItemDelay(displayItems.length + 1)}
             onClick={openNewFloorSheet}
           >
             <Plus className="size-3.5" />
@@ -74,7 +82,7 @@ export function AgentCanvasFloorList(props: {
             {translate('auto.components.agentCanvas.floorHooks', 'Floor hooks')}
           </button>
           <div className="scrollbar-sleek flex min-h-0 flex-col overflow-y-auto">
-            {displayItems.map((level) => {
+            {displayItems.map((level, offset) => {
               const isActive = level.id === activeLevelId
               const label =
                 level.id === null
@@ -95,10 +103,15 @@ export function AgentCanvasFloorList(props: {
                 <div
                   key={level.id ?? 'ground'}
                   className={cn(
-                    'group flex shrink-0 items-center gap-1 rounded-xl px-2',
+                    'agent-canvas-floor-item group flex shrink-0 items-center gap-1 rounded-xl px-2 transition-colors duration-200',
                     isActive ? 'bg-canvas-accent text-primary-foreground' : 'hover:bg-foreground/5'
                   )}
-                  style={{ height: ITEM_HEIGHT }}
+                  // Why counted from the bottom: the reference's list grows upward out of
+                  // the pill, so the floor nearest the pill appears first.
+                  style={{
+                    height: ITEM_HEIGHT,
+                    ...floorItemDelay(displayItems.length - 1 - offset)
+                  }}
                 >
                   <button
                     type="button"
@@ -226,6 +239,11 @@ export function AgentCanvasFloorList(props: {
       </div>
     </div>
   )
+}
+
+/** The reference's sidebar stagger: 30ms between rows (FLOOR_SIDEBAR_STAGGER_STEP). */
+function floorItemDelay(indexFromBottom: number): React.CSSProperties {
+  return { animationDelay: `${indexFromBottom * 30}ms` }
 }
 
 /** The glass pill that names the current floor and opens the stack. */

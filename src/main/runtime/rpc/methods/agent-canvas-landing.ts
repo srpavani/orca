@@ -84,6 +84,14 @@ export const AGENT_CANVAS_LANDING_METHODS = [
     handler: async (params) => landFloor(runGit, params.worktreePath, params.target)
   }),
   defineMethod({
+    // The reference refuses a floor on a repository with no commits
+    // (repositoryHasNoCommits): there is nothing to branch a worktree from.
+    name: 'canvas.repoHasCommits',
+    params: z.object({ repoPath: z.string().min(1) }),
+    handler: async (params) =>
+      (await runGit(['rev-parse', '--verify', '--quiet', 'HEAD'], params.repoPath)).exitCode === 0
+  }),
+  defineMethod({
     name: 'canvas.landingResolve',
     params: LandingResolveParams,
     handler: async (params, { runtime }) =>

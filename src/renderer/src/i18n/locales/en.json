@@ -17643,7 +17643,8 @@
         "noteColorWhite": "White",
         "noteColorCharcoal": "Charcoal",
         "noteColorSlate": "Slate",
-        "noteColorMidnight": "Midnight"
+        "noteColorMidnight": "Midnight",
+        "isolationNoCommits": "{{directory}} has no commits yet. Make a first commit, then a floor can branch from it."
       }
     },
     "i18n": {

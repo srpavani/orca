@@ -20,6 +20,7 @@ import { useAppStore } from '@/store'
 import { findBranchWorktree } from './agent-canvas-branch-floor'
 import { getAgentCanvasState, setCanvasViewState, updateDocument } from './agent-canvas-store'
 import { runFloorHooks } from './agent-canvas-hook-runner'
+import { canvasRepoId } from './agent-canvas-repo'
 
 const LOCAL_RUNTIME = { kind: 'local' } as const
 
@@ -83,7 +84,7 @@ export async function setCanvasLevelLoaded(levelId: string, loaded: boolean): Pr
     return false
   }
   const app = useAppStore.getState()
-  const repoId = app.activeRepoId
+  const repoId = canvasRepoId()
   const branch = level.branch
   const worktree =
     repoId !== null && branch !== null

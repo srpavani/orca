@@ -55,6 +55,7 @@ import { useCanvasViewControls } from './use-canvas-view-controls'
 import { useAgentCanvasGestures } from './use-agent-canvas-gestures'
 import { useAgentCanvasLivePanes } from './use-agent-canvas-live-panes'
 import { usePrefersReducedMotion } from './use-prefers-reduced-motion'
+import { useFloorOverviewKeys } from './use-floor-overview-keys'
 import { useStageHeight } from './use-stage-height'
 
 /**
@@ -90,6 +91,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const surfaceRef = React.useRef<HTMLDivElement | null>(null)
   const stageHeight = useStageHeight(surfaceRef)
   const prefersReducedMotion = usePrefersReducedMotion()
+  useFloorOverviewKeys()
   // Why the same source the tab bar uses: a card must not disagree with the
   // rest of Orca about whether its agent is working.
   const layouts = useAppStore((state) => state.terminalLayoutsByTabId)

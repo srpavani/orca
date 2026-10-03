@@ -1954,6 +1954,32 @@ html.native-shell .app-layout {
   animation: settings-shell-enter 180ms ease-out;
 }
 
+/* Agent canvas floor list: each row grows out of the pill (the reference's
+   FLOOR_SIDEBAR_ITEM_SPRING, opacity 0 -> 1 and scale 0.8 -> 1, 30ms stagger set
+   inline). */
+@keyframes agent-canvas-floor-item-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.agent-canvas-floor-item {
+  animation: agent-canvas-floor-item-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: right center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-canvas-floor-item {
+    animation: none;
+  }
+}
+
 .repo-icon-emoji-picker .EmojiPickerReact {
   --epr-bg-color: var(--card);
   --epr-category-label-bg-color: var(--card);

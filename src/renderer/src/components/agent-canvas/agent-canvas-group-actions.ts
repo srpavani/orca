@@ -5,12 +5,17 @@ import {
   ungroupCanvasNodes,
   type GroupColor
 } from '../../../../shared/spatial-canvas/groups'
+import { patchNodeFrame } from '../../../../shared/spatial-canvas/document'
 import { findCanvasNode } from '../../../../shared/spatial-canvas/node-ops'
 import {
   applyElementDefault,
   type ElementDefaultChoice
 } from '../../../../shared/spatial-canvas/element-defaults'
-import type { CanvasLevelId, CanvasNodeId } from '../../../../shared/spatial-canvas/types'
+import type {
+  CanvasLevelId,
+  CanvasNodeId,
+  CanvasPoint
+} from '../../../../shared/spatial-canvas/types'
 import { getAgentCanvasState, updateDocument } from './agent-canvas-store'
 
 /** Groups the cards; returns the group id, or null when fewer than two could be grouped. */
@@ -58,4 +63,18 @@ export function adoptElementDefault(choice: ElementDefaultChoice): void {
     ...document,
     elementDefaults: applyElementDefault(document.elementDefaults ?? {}, choice)
   }))
+}
+
+/** Moves several cards in one document update, so a group drag is one change, not N. */
+export function moveCanvasNodes(positions: ReadonlyMap<CanvasNodeId, CanvasPoint>): void {
+  if (positions.size === 0) {
+    return
+  }
+  updateDocument((document) => {
+    let next = document
+    for (const [nodeId, at] of positions) {
+      next = patchNodeFrame(next, nodeId, at)
+    }
+    return next
+  })
 }

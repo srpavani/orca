@@ -20,6 +20,7 @@ import { openBranchFloor } from './agent-canvas-branch-floor'
 import { runFloorHooks } from './agent-canvas-hook-runner'
 import { getAgentCanvasState } from './agent-canvas-store'
 import { closeNewFloorSheet, useNewFloorSheetOpen } from './agent-canvas-new-floor'
+import { useCanvasRepoId, useRepoHasCommits } from './agent-canvas-repo'
 
 type BranchMode = 'new' | 'existing'
 
@@ -43,10 +44,17 @@ export function AgentCanvasNewFloorDialog(): React.JSX.Element | null {
 }
 
 function NewFloorBody(): React.JSX.Element {
-  const repoId = useAppStore((state) => state.activeRepoId)
-  const hasRepository = repoId !== null
+  const repoId = useCanvasRepoId()
+  const repoPath = useAppStore((state) =>
+    repoId === null ? null : (state.repos.find((repo) => repo.id === repoId)?.path ?? null)
+  )
+  const hasCommits = useRepoHasCommits(repoPath)
+  // Why commits matter: a floor's checkout branches from the repository's history,
+  // and a repository with none has nothing to branch from (the reference refuses too).
+  const hasRepository = repoId !== null && hasCommits !== false
   const [name, setName] = React.useState('')
-  const [isolated, setIsolated] = React.useState(hasRepository)
+  const [isolatedChoice, setIsolated] = React.useState(true)
+  const isolated = isolatedChoice && hasRepository
   const [mode, setMode] = React.useState<BranchMode>('new')
   const [branch, setBranch] = React.useState('')
   const [creating, setCreating] = React.useState(false)
@@ -135,11 +143,19 @@ function NewFloorBody(): React.JSX.Element {
           />
         </div>
 
-        {!hasRepository ? (
+        {repoId === null ? (
           <p className="text-xs text-muted-foreground">
             {translate(
               'auto.components.agentCanvas.isolationNoRepo',
               'This workspace is not in a Git repository, so a floor cannot have its own checkout.'
+            )}
+          </p>
+        ) : hasCommits === false ? (
+          <p className="text-xs text-muted-foreground">
+            {translate(
+              'auto.components.agentCanvas.isolationNoCommits',
+              '{{directory}} has no commits yet. Make a first commit, then a floor can branch from it.',
+              { directory: repoPath ?? '' }
             )}
           </p>
         ) : null}
