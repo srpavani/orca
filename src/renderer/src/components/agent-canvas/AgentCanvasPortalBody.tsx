@@ -1,9 +1,11 @@
 import React from 'react'
-import { ExternalLink, RotateCw } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import type { CanvasNode, CanvasPortalContent } from '../../../../shared/spatial-canvas/types'
-
-const HEADER_HEIGHT = 30
+import {
+  CARD_HEADER_HEIGHT,
+  PortalControlsBar,
+  type CardHeaderDrag
+} from './AgentCanvasCardHeaders'
 
 /** Reload requests from outside the card (the portal toolbar's Reload), by node id. */
 const reloadListeners = new Map<string, Set<() => void>>()
@@ -15,66 +17,66 @@ export function requestCanvasPortalReload(nodeId: string): void {
 }
 
 /**
- * A live web page pinned on the canvas (docs, a dev server, a dashboard).
- * Sized in world units: the card scales as a whole, so zoom never relayouts the
- * page. The frame only takes pointer input while its card is selected, otherwise
- * a drag that starts over the page would be swallowed instead of panning.
+ * A live web page pinned on the canvas (docs, a dev server, a dashboard), under
+ * the reference's PortalControlsBar, with its sweeping progress strip while the
+ * page loads. Sized in world units: the card scales as a whole, so zoom never
+ * relayouts the page. The frame only takes pointer input while its card is
+ * selected, otherwise a drag that starts over the page would be swallowed; with
+ * the chrome hidden the page itself is the drag handle, as in the reference.
  */
 export function AgentCanvasPortalBody(props: {
   node: CanvasNode & { content: CanvasPortalContent }
   interactive: boolean
+  drag: CardHeaderDrag
 }): React.JSX.Element {
   const { node, interactive } = props
   const [reloadKey, setReloadKey] = React.useState(0)
+  const [loading, setLoading] = React.useState(true)
+  const reload = React.useCallback(() => {
+    setLoading(true)
+    setReloadKey((value) => value + 1)
+  }, [])
   React.useEffect(() => {
-    const listener = (): void => setReloadKey((value) => value + 1)
     const set = reloadListeners.get(node.id) ?? new Set<() => void>()
-    set.add(listener)
+    set.add(reload)
     reloadListeners.set(node.id, set)
     return () => {
-      set.delete(listener)
+      set.delete(reload)
     }
-  }, [node.id])
-  const width = node.frame.width
-  const height = Math.max(0, node.frame.height - HEADER_HEIGHT)
+  }, [node.id, reload])
+  React.useEffect(() => setLoading(true), [node.content.url])
+  const chrome = node.content.chromeHidden !== true
+  const height = Math.max(
+    0,
+    node.frame.height - (chrome ? CARD_HEADER_HEIGHT.portal + CARD_HEADER_HEIGHT.portalBar : 0)
+  )
   return (
-    <div className="relative overflow-hidden" style={{ width, height }}>
-      <iframe
-        key={reloadKey}
-        title={node.content.url}
-        src={node.content.url}
-        // Why: a third-party page must never reach the app — cross-origin plus a sandbox
-        // without top-navigation keeps it from steering or scripting the Orca window.
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerPolicy="no-referrer"
-        className="size-full border-0 bg-background"
-        style={{ pointerEvents: interactive ? 'auto' : 'none' }}
-      />
-      {node.content.chromeHidden === true ? null : (
-        <div className="absolute right-1 top-1 flex gap-1 opacity-70 hover:opacity-100">
-          <button
-            type="button"
-            className="rounded bg-muted p-1 text-muted-foreground hover:text-foreground"
-            aria-label={translate('auto.components.agentCanvas.portalReload', 'Reload page')}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => setReloadKey((value) => value + 1)}
+    <div className="flex flex-col" style={{ width: node.frame.width }}>
+      {chrome ? <PortalControlsBar node={node} onReload={reload} /> : null}
+      <div className="relative overflow-hidden" style={{ height }}>
+        <iframe
+          key={reloadKey}
+          title={node.content.url}
+          src={node.content.url}
+          // Why: a third-party page must never reach the app — cross-origin plus a sandbox
+          // without top-navigation keeps it from steering or scripting the Orca window.
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          referrerPolicy="no-referrer"
+          className="size-full border-0 bg-white"
+          style={{ pointerEvents: interactive ? 'auto' : 'none' }}
+          onLoad={() => setLoading(false)}
+        />
+        {!chrome && !interactive ? <div {...props.drag} className="absolute inset-0" /> : null}
+        {loading ? (
+          <div
+            role="progressbar"
+            aria-label={translate('auto.components.agentCanvas.portalLoading', 'Loading page')}
+            className="absolute inset-x-0 top-0 h-0.5 overflow-hidden"
           >
-            <RotateCw className="size-3" />
-          </button>
-          <button
-            type="button"
-            className="rounded bg-muted p-1 text-muted-foreground hover:text-foreground"
-            aria-label={translate(
-              'auto.components.agentCanvas.portalOpenExternal',
-              'Open in browser'
-            )}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => void window.api.shell.openUrl(node.content.url)}
-          >
-            <ExternalLink className="size-3" />
-          </button>
-        </div>
-      )}
+            <div className="canvas-portal-progress h-full w-1/3 rounded-full bg-canvas-accent" />
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }

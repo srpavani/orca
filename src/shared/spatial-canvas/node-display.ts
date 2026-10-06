@@ -87,3 +87,18 @@ export function toggleCanvasPortalFlag(
     return { ...node, content }
   })
 }
+
+/**
+ * Points a portal at a new page, from its address bar. The address is taken
+ * as typed and normalized the way a new portal's is; anything that is not an
+ * http(s) page leaves the portal where it was.
+ */
+export function setCanvasPortalUrl(
+  document: CanvasDocument,
+  nodeId: CanvasNodeId,
+  url: string
+): CanvasDocument {
+  return mapNodes(document, new Set([nodeId]), (node) =>
+    node.content.kind === 'portal' ? { ...node, content: { ...node.content, url } } : node
+  )
+}

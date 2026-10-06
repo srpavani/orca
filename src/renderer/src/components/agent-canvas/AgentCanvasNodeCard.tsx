@@ -1,19 +1,26 @@
 import React from 'react'
-import { EyeOff, FolderTree, Globe, Lock, SquareTerminal, StickyNote, Type, X } from 'lucide-react'
+import { EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type {
   CanvasNode,
   CanvasNoteColor,
-  CanvasRect,
-  CanvasSessionContent
+  CanvasRect
 } from '../../../../shared/spatial-canvas/types'
-import { AgentCanvasCardControls } from './AgentCanvasCardControls'
 import type { CanvasSelectionPaint } from '../../../../shared/spatial-canvas/canvas-appearance'
 import type { CardAgentState } from './agent-canvas-card-status'
 import { canvasNodeRedacted } from '../../../../shared/spatial-canvas/node-display'
 import { writeCanvasNote } from './agent-canvas-store'
 import { NOTE_PAPER_CLASS, parseNoteColor } from './agent-canvas-note-paper'
+import {
+  CARD_HEADER_HEIGHT,
+  FileTreeCardHeader,
+  NoteCardHeader,
+  PortalCardHeader,
+  SessionCardHeader,
+  type CardHeaderDrag
+} from './AgentCanvasCardHeaders'
+import { AgentCanvasTextBlockBody } from './AgentCanvasTextBlockBody'
 
 type AgentCanvasNodeCardProps = {
   node: CanvasNode
@@ -37,12 +44,11 @@ type AgentCanvasNodeCardProps = {
   onPortPointerDown: (event: React.PointerEvent, node: CanvasNode) => void
   onSelect: (node: CanvasNode) => void
   onOpen: (node: CanvasNode) => void
-  onRemove: (node: CanvasNode) => void
   /** Ref callback for the element a live terminal is portaled into; absent keeps the card static. */
   liveSlotRef?: (element: HTMLElement | null) => void
   /** Custom body (e.g. a portal page); replaces the default per-kind body. */
   body?: React.ReactNode
-  /** Extra header buttons (e.g. the bridge menu), shown before the remove button. */
+  /** Extra header items (e.g. the bridge menu), at the header's right end. */
   headerActions?: React.ReactNode
   /** Clicking a blurred card's placeholder reveals it. */
   onReveal?: (node: CanvasNode) => void
@@ -73,37 +79,26 @@ function RedactedBody(props: { onReveal: () => void }): React.JSX.Element {
 
 /** Corner marks for the selection styles that use them. */
 function SelectionMarks(props: { marks: 'brackets' | 'dots' }): React.JSX.Element {
-  if (props.marks === 'dots') {
-    return (
-      <>
-        {['left-1 top-1', 'right-1 top-1', 'left-1 bottom-1', 'right-1 bottom-1'].map(
-          (position) => (
-            <span
-              key={position}
-              aria-hidden="true"
-              className={cn(
-                'pointer-events-none absolute size-1.5 rounded-full bg-canvas-accent',
-                position
-              )}
-            />
-          )
-        )}
-      </>
-    )
-  }
+  const positions =
+    props.marks === 'dots'
+      ? ['left-1 top-1', 'right-1 top-1', 'left-1 bottom-1', 'right-1 bottom-1']
+      : [
+          'left-0 top-0 border-l-2 border-t-2',
+          'right-0 top-0 border-r-2 border-t-2',
+          'left-0 bottom-0 border-b-2 border-l-2',
+          'right-0 bottom-0 border-b-2 border-r-2'
+        ]
   return (
     <>
-      {[
-        'left-0 top-0 border-l-2 border-t-2',
-        'right-0 top-0 border-r-2 border-t-2',
-        'left-0 bottom-0 border-b-2 border-l-2',
-        'right-0 bottom-0 border-b-2 border-r-2'
-      ].map((position) => (
+      {positions.map((position) => (
         <span
           key={position}
           aria-hidden="true"
           className={cn(
-            'pointer-events-none absolute size-2 rounded-sm border-canvas-accent',
+            'pointer-events-none absolute',
+            props.marks === 'dots'
+              ? 'size-1.5 rounded-full bg-canvas-accent'
+              : 'size-2 rounded-sm border-canvas-accent',
             position
           )}
         />
@@ -111,9 +106,6 @@ function SelectionMarks(props: { marks: 'brackets' | 'dots' }): React.JSX.Elemen
     </>
   )
 }
-
-/** Maestri's card header is 16px at 100%; two px more here to fit the header buttons. */
-const HEADER_HEIGHT = 18
 
 function noteColor(node: CanvasNode): CanvasNoteColor {
   return parseNoteColor(node.content.kind === 'note' ? node.content.color : undefined) ?? 'yellow'
@@ -134,7 +126,7 @@ function LiveTerminalSlot(props: {
       className="relative shrink-0 overflow-hidden bg-editor-surface"
       style={{
         width: props.node.frame.width,
-        height: Math.max(0, props.node.frame.height - HEADER_HEIGHT)
+        height: Math.max(0, props.node.frame.height - CARD_HEADER_HEIGHT.session)
       }}
       onPointerDown={(event) => event.stopPropagation()}
       onDoubleClick={(event) => event.stopPropagation()}
@@ -144,69 +136,68 @@ function LiveTerminalSlot(props: {
   )
 }
 
-function nodeTitle(node: CanvasNode, noteBody: string): string {
-  if (node.content.kind === 'session') {
-    return node.content.label
+/** The header the reference draws for this kind of card; a text block has none. */
+function CardHeader(props: {
+  node: CanvasNode
+  state: CardAgentState
+  drag: CardHeaderDrag
+  trailing?: React.ReactNode
+}): React.JSX.Element | null {
+  const { node, drag } = props
+  const content = node.content
+  switch (content.kind) {
+    case 'session':
+      return (
+        <SessionCardHeader
+          node={{ ...node, content }}
+          state={props.state}
+          drag={drag}
+          trailing={props.trailing}
+        />
+      )
+    case 'portal':
+      return content.chromeHidden === true ? null : (
+        <PortalCardHeader node={{ ...node, content }} drag={drag} />
+      )
+    case 'note':
+      return <NoteCardHeader node={{ ...node, content }} drag={drag} trailing={props.trailing} />
+    case 'fileTree':
+      return <FileTreeCardHeader node={{ ...node, content }} drag={drag} />
+    default:
+      return null
   }
-  if (node.content.kind === 'note') {
-    const firstLine = noteBody.split('\n').find((line) => line.trim().length > 0)
-    return (
-      node.content.pinnedName ??
-      firstLine?.trim() ??
-      translate('auto.components.agentCanvas.untitledNote', 'Untitled note')
-    )
-  }
-  if (node.content.kind === 'fileTree') {
-    return node.content.rootName
-  }
-  if (node.content.kind === 'text') {
-    const firstLine = noteBody.split('\n').find((line) => line.trim().length > 0)
-    return (
-      node.content.pinnedName ??
-      firstLine?.trim() ??
-      translate('auto.components.agentCanvas.untitledText', 'Text block')
-    )
-  }
-  if (node.content.kind === 'portal') {
-    return node.content.url.replace(/^https?:\/\//, '')
-  }
-  return node.content.kind
 }
 
 /**
  * A canvas card. It is positioned and scaled with one transform rather than
  * sizing each child by zoom, so text, icons and buttons keep their proportions
- * at every zoom level — the way Maestri's nodes behave.
+ * at every zoom level — the way Maestri's nodes behave. The paint is the
+ * reference's: an opaque --bg card, rounded-lg, with --shadow-node (deeper
+ * when selected); a note is its paper colour, flat; a text block is bare text.
  */
 export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.Element {
   const { node, screen, zoom, selected, wiringSource, live, noteBody } = props
-  const session = node.content.kind === 'session' ? node.content : null
-  const note = node.content.kind === 'note' ? node.content : null
-  const text = node.content.kind === 'text' ? node.content : null
-  const isSession = session !== null
-  const isNote = note !== null
-  const isText = text !== null
-  const body = note?.noteId ?? text?.textId ?? null
-  const locked = node.locked === true
-  const Icon = isSession
-    ? SquareTerminal
-    : node.content.kind === 'portal'
-      ? Globe
-      : node.content.kind === 'fileTree'
-        ? FolderTree
-        : isText
-          ? Type
-          : StickyNote
+  const kind = node.content.kind
+  const note = kind === 'note' ? node.content : null
+  const isText = kind === 'text'
+  const bodyId = note?.noteId ?? null
+  const drag: CardHeaderDrag = {
+    'data-canvas-card-header': '',
+    onPointerDown: (event) => props.onHeaderPointerDown(event, node)
+  }
   return (
     <div
       data-canvas-node-id={node.id}
+      data-canvas-node-kind={kind}
       className={cn(
-        'absolute flex flex-col overflow-hidden rounded-xl',
+        'absolute flex flex-col',
+        // The reference's rounded-lg is 8px; Orca's theme widens rounded-lg, so it is pinned.
+        isText ? 'overflow-visible' : 'overflow-hidden rounded-[8px]',
         // Why the paint comes from the board: the reference offers five ways to show a
         // selected card, and the user picks one for the whole canvas.
         // Why no shadow utility while multi-selected: utilities outrank the plain
         // class, and canvas-node-multiselected owns the box-shadow (edge, halo, lift).
-        props.multiSelected || props.focused
+        isText || props.multiSelected || props.focused
           ? null
           : selected && props.selection.boxShadow === 'elevated'
             ? 'canvas-node-shadow-selected'
@@ -215,9 +206,13 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
           props.selection.border === 'dashed' &&
           'border border-dashed border-canvas-accent',
         selected && props.selection.border === 'solid' && 'border border-canvas-accent',
-        isNote ? NOTE_PAPER_CLASS[noteColor(node)] : 'bg-card text-card-foreground',
-        isText && 'bg-transparent shadow-none ring-1 ring-foreground/15',
-        locked && 'opacity-80',
+        note
+          ? NOTE_PAPER_CLASS[noteColor(node)]
+          : isText
+            ? 'text-foreground'
+            : 'bg-canvas-card-bg text-foreground',
+        kind === 'fileTree' && 'border border-canvas-card-border',
+        node.locked === true && 'opacity-80',
         // Why its own mark: the board's selection style can be as quiet as a lifted
         // shadow, which tells one card apart but not which ten a rectangle caught.
         props.multiSelected && 'canvas-node-multiselected',
@@ -239,75 +234,31 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
       }}
       onDoubleClick={() => props.onOpen(node)}
     >
-      <div
-        data-canvas-card-header=""
-        className="relative flex shrink-0 cursor-grab items-center gap-1.5 overflow-hidden px-2 active:cursor-grabbing"
-        style={{ height: HEADER_HEIGHT }}
-        onPointerDown={(event) => props.onHeaderPointerDown(event, node)}
-      >
-        {/* Why an overlay rather than a background on the strip: the note's paper colour has
-            to stay flat underneath, or the header and the body disagree at their seam. */}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{ background: 'var(--canvas-header-tint)' }}
-        />
-        <Icon className="relative size-3 shrink-0 opacity-60" />
-        <span className="relative min-w-0 flex-1 truncate text-[11px] font-medium leading-none">
-          {nodeTitle(node, noteBody)}
-        </span>
-        {session ? (
-          <AgentCanvasCardControls
-            node={node as CanvasNode & { content: CanvasSessionContent }}
-            state={props.agentState}
-            live={live}
-          />
-        ) : null}
-        {locked ? <Lock className="relative size-3 shrink-0 opacity-60" /> : null}
-        {props.headerActions ? <span className="relative">{props.headerActions}</span> : null}
-        <button
-          type="button"
-          className="relative shrink-0 rounded p-0.5 opacity-50 hover:bg-foreground/10 hover:opacity-100"
-          aria-label={translate('auto.components.agentCanvas.removeNode', 'Remove from canvas')}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => props.onRemove(node)}
-        >
-          <X className="size-3" />
-        </button>
-      </div>
+      <CardHeader node={node} state={props.agentState} drag={drag} trailing={props.headerActions} />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {canvasNodeRedacted(node) ? (
           <RedactedBody onReveal={() => props.onReveal?.(node)} />
         ) : props.body ? (
           props.body
-        ) : body !== null ? (
+        ) : isText ? (
+          <AgentCanvasTextBlockBody node={node} text={noteBody} selected={selected} drag={drag} />
+        ) : bodyId !== null ? (
           <textarea
-            className={cn(
-              'size-full resize-none bg-transparent p-2.5 text-xs leading-relaxed outline-none placeholder:opacity-40',
-              isText && 'text-[13px] leading-relaxed'
-            )}
+            className="scrollbar-sleek size-full resize-none bg-transparent px-2.5 py-2 text-xs leading-relaxed outline-none placeholder:opacity-40"
             value={noteBody}
             readOnly={note?.readOnly ?? false}
-            placeholder={
-              isText
-                ? translate(
-                    'auto.components.agentCanvas.textPlaceholder',
-                    'Write text for the board…'
-                  )
-                : translate(
-                    'auto.components.agentCanvas.notePlaceholder',
-                    'Write a note for connected agents…'
-                  )
-            }
+            aria-label={translate('auto.components.agentCanvas.noteUntitled', 'Note')}
+            placeholder={translate(
+              'auto.components.agentCanvas.notePlaceholder',
+              'Write a note for connected agents…'
+            )}
             onPointerDown={(event) => event.stopPropagation()}
-            onChange={(event) => {
-              writeCanvasNote(body, event.target.value)
-            }}
+            onChange={(event) => writeCanvasNote(bodyId, event.target.value)}
           />
-        ) : isSession && live && props.liveSlotRef ? (
+        ) : kind === 'session' && live && props.liveSlotRef ? (
           <LiveTerminalSlot node={node} slotRef={props.liveSlotRef} />
         ) : (
-          <div className="flex size-full items-center justify-center p-3 text-center text-xs opacity-50">
+          <div className="flex size-full items-center justify-center p-3 text-center text-xs text-muted-foreground">
             {translate(
               'auto.components.agentCanvas.sessionHint',
               'Double-click to open this session'

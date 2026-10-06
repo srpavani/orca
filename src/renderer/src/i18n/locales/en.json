@@ -17698,7 +17698,20 @@
         "elementActions": "Element actions",
         "newElementDefaultsMenu": "New Element Defaults",
         "useThisSizeMenu": "Use This Size",
-        "useThisColorMenu": "Use This Color"
+        "useThisColorMenu": "Use This Color",
+        "terminalUntitled": "Terminal",
+        "renameTerminal": "Rename terminal",
+        "terminalNamePlaceholder": "Terminal name",
+        "portalBack": "Back",
+        "portalForward": "Forward",
+        "portalAddress": "Address",
+        "portalAddressPlaceholder": "Enter a URL…",
+        "noteUntitled": "Note",
+        "changeNoteColor": "Change note color",
+        "portalLoading": "Loading page",
+        "textBlock": "Text block",
+        "editTextBlock": "Edit text block",
+        "textPlaceholderShort": "Text"
       }
     },
     "i18n": {

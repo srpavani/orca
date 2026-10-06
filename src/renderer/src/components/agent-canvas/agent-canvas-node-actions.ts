@@ -23,8 +23,10 @@ import {
 } from '../../../../shared/spatial-canvas/node-ops'
 import {
   setCanvasNodesRedacted,
+  setCanvasPortalUrl,
   toggleCanvasPortalFlag
 } from '../../../../shared/spatial-canvas/node-display'
+import { normalizePortalUrl } from '../../../../shared/spatial-canvas/level-edits'
 import {
   copyCanvasNodes,
   pasteCanvasClipboard,
@@ -202,4 +204,14 @@ export function canvasNodeHasContents(nodeId: CanvasNodeId): boolean {
   const node = findCanvasNode(document, nodeId)?.node
   const bodyId = node ? bodyIdsOfNode(node)[0] : undefined
   return bodyId !== undefined && (notes[bodyId] ?? '').trim().length > 0
+}
+
+/** The portal address bar's Enter: navigates when the address is an http(s) page. */
+export function navigateCanvasPortal(nodeId: CanvasNodeId, raw: string): boolean {
+  const url = normalizePortalUrl(raw)
+  if (url === null) {
+    return false
+  }
+  updateDocument((document) => setCanvasPortalUrl(document, nodeId, url))
+  return true
 }

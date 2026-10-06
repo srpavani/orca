@@ -8,6 +8,7 @@ import {
   AlignStartHorizontal,
   AlignStartVertical,
   AlignVerticalDistributeCenter,
+  Check,
   ClipboardCopy,
   Copy,
   CopyPlus,
@@ -54,7 +55,9 @@ import {
   toggleCanvasPortalChrome
 } from './agent-canvas-node-actions'
 import { openCanvasPrompt } from './agent-canvas-prompt'
+import { requestCanvasRename } from './AgentCanvasRenamePopover'
 import { removeCanvasNode } from './agent-canvas-store'
+import { setCanvasSessionFlags } from './agent-canvas-document-setters'
 import { AgentCanvasElementDefaultsItems } from './AgentCanvasCardKindItems'
 
 type AlignEntry = {
@@ -133,17 +136,24 @@ function cardName(node: CanvasNode): string {
 }
 
 function RenameItem(props: { node: CanvasNode }): React.JSX.Element {
+  const { node } = props
+  // Why two routes: a terminal or portal names itself in its header, so Rename
+  // opens that header's popover, as the reference does; a note's name has no
+  // field of its own, so it gets the dialog.
+  const inHeader = node.content.kind === 'session'
   return (
     <ContextMenuItem
       onSelect={() =>
-        openCanvasPrompt({
-          kind: 'text',
-          title: translate('auto.components.agentCanvas.rename', 'Rename'),
-          label: translate('auto.components.agentCanvas.renameLabel', 'Name'),
-          confirmLabel: translate('auto.components.agentCanvas.rename', 'Rename'),
-          initialValue: cardName(props.node),
-          onSubmit: (value) => renameCanvasNodeTo(props.node.id, value)
-        })
+        inHeader
+          ? requestCanvasRename(node.id)
+          : openCanvasPrompt({
+              kind: 'text',
+              title: translate('auto.components.agentCanvas.rename', 'Rename'),
+              label: translate('auto.components.agentCanvas.renameLabel', 'Name'),
+              confirmLabel: translate('auto.components.agentCanvas.rename', 'Rename'),
+              initialValue: cardName(node),
+              onSubmit: (value) => renameCanvasNodeTo(node.id, value)
+            })
       }
     >
       <Pencil />
@@ -164,6 +174,29 @@ function BlurItem(props: { node: CanvasNode; targets: readonly string[] }): Reac
   )
 }
 
+/**
+ * The reference's ContextMenuCheckboxItem (Monitor Activity): the check sits in
+ * the left gutter. The menu stays open on toggle, as a checkbox item does.
+ */
+function CheckItem(props: {
+  checked: boolean
+  label: string
+  onToggle: (checked: boolean) => void
+}): React.JSX.Element {
+  return (
+    <ContextMenuItem
+      role="menuitemcheckbox"
+      aria-checked={props.checked}
+      onSelect={(event) => {
+        event.preventDefault()
+        props.onToggle(!props.checked)
+      }}
+    >
+      {props.checked ? <Check /> : <span aria-hidden className="size-3.5" />}
+      {props.label}
+    </ContextMenuItem>
+  )
+}
 /** The kind-specific middle of the reference's NodeContextMenu. */
 function KindItems(props: {
   node: CanvasNode
@@ -175,6 +208,16 @@ function KindItems(props: {
     return (
       <>
         <RenameItem node={node} />
+        <CheckItem
+          checked={content.watched !== false}
+          label={translate('auto.components.agentCanvas.monitorActivity', 'Monitor Activity')}
+          onToggle={(watched) => setCanvasSessionFlags(node.id, { watched })}
+        />
+        <CheckItem
+          checked={content.isLead}
+          label={translate('auto.components.agentCanvas.maestroMode', 'Maestro')}
+          onToggle={(isLead) => setCanvasSessionFlags(node.id, { isLead })}
+        />
         <ContextMenuSeparator />
         {supportsRedaction(content) ? <BlurItem node={node} targets={targets} /> : null}
         <AgentCanvasElementDefaultsItems node={node} />
@@ -203,7 +246,6 @@ function KindItems(props: {
     const hidden = content.chromeHidden === true
     return (
       <>
-        <RenameItem node={node} />
         <ContextMenuItem onSelect={() => toggleCanvasPortalChrome(node.id)}>
           {hidden ? <PanelTopOpen /> : <PanelTopClose />}
           {hidden

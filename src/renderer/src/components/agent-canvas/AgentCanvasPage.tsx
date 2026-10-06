@@ -5,7 +5,7 @@ import { translate } from '@/i18n/i18n'
 import { screenToWorld, worldRectToScreen } from '../../../../shared/spatial-canvas/geometry'
 import { buildFloorStack } from '../../../../shared/spatial-canvas/floor-stack'
 import { levelContents, levelsOf } from '../../../../shared/spatial-canvas/levels'
-import type { CanvasNode, CanvasNoteColor } from '../../../../shared/spatial-canvas/types'
+import type { CanvasNode } from '../../../../shared/spatial-canvas/types'
 import { isFileTreeNode, isPortalNode } from './agent-canvas-node-kinds'
 import { addCanvasPortal } from './agent-canvas-level-actions'
 import { agentStatusForNode, cardAgentState } from './agent-canvas-card-status'
@@ -17,13 +17,10 @@ import {
 } from '../../../../shared/spatial-canvas/canvas-appearance'
 import { AgentCanvasAppearanceDialog } from './AgentCanvasAppearanceDialog'
 import { AgentCanvasLandingDialog } from './AgentCanvasLandingDialog'
-import { parseNoteColor } from './agent-canvas-note-paper'
-import { AgentCanvasNoteColorPicker } from './AgentCanvasNoteColorPicker'
 import { liveSessionsFromTabs } from './agent-canvas-sessions'
 import {
   disconnectCanvasEdge,
   getAgentCanvasState,
-  removeCanvasNode,
   selectCanvasNode,
   setCanvasViewState,
   startCanvasHostSync,
@@ -71,10 +68,6 @@ function bodyOfNode(node: CanvasNode, notes: Record<string, string>): string {
     return notes[node.content.noteId] ?? ''
   }
   return node.content.kind === 'text' ? (notes[node.content.textId] ?? '') : ''
-}
-
-function noteColorOf(node: CanvasNode): CanvasNoteColor {
-  return parseNoteColor(node.content.kind === 'note' ? node.content.color : undefined) ?? 'yellow'
 }
 
 export default function AgentCanvasPage(): React.JSX.Element {
@@ -310,19 +303,24 @@ export default function AgentCanvasPage(): React.JSX.Element {
                   onPortPointerDown={gestures.onPortPointerDown}
                   onSelect={(target) => selectCanvasNode(target.id)}
                   onOpen={openNode}
-                  onRemove={(target) => removeCanvasNode(target.id)}
+
                   liveSlotRef={liveSlotFor(node)}
                   onReveal={(revealed) => setCanvasNodesBlurred([revealed.id], false)}
                   headerActions={
                     node.content.kind === 'session' ? (
                       <AgentCanvasBridgeMenu document={document} node={node} />
-                    ) : node.content.kind === 'note' ? (
-                      <AgentCanvasNoteColorPicker nodeId={node.id} color={noteColorOf(node)} />
                     ) : undefined
                   }
                   body={
                     isPortalNode(node) ? (
-                      <AgentCanvasPortalBody node={node} interactive={node.id === selectedNodeId} />
+                      <AgentCanvasPortalBody
+                        node={node}
+                        interactive={node.id === selectedNodeId}
+                        drag={{
+                          'data-canvas-card-header': '',
+                          onPointerDown: (event) => gestures.onHeaderPointerDown(event, node)
+                        }}
+                      />
                     ) : isFileTreeNode(node) ? (
                       <AgentCanvasFileTreeBody
                         node={node}

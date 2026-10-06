@@ -12,8 +12,8 @@ import { translate } from '@/i18n/i18n'
 import type { CanvasNode } from '../../../../shared/spatial-canvas/types'
 import { startCanvasConnect, useCanvasConnectingFrom } from './agent-canvas-connect-mode'
 import { absoluteTreePath } from './agent-canvas-file-ops'
-import { renameCanvasNodeTo, toggleCanvasPortalChrome } from './agent-canvas-node-actions'
-import { openCanvasPrompt } from './agent-canvas-prompt'
+import { toggleCanvasPortalChrome } from './agent-canvas-node-actions'
+import { requestCanvasRename } from './AgentCanvasRenamePopover'
 import { removeCanvasNode } from './agent-canvas-store'
 import { AgentCanvasConnectionsBadge } from './AgentCanvasConnectionsBadge'
 import {
@@ -22,6 +22,8 @@ import {
   AgentCanvasToolbarDivider
 } from './AgentCanvasGlass'
 import { requestCanvasPortalReload } from './AgentCanvasPortalBody'
+import { AgentCanvasNoteColorPicker } from './AgentCanvasNoteColorPicker'
+import { parseNoteColor } from './agent-canvas-note-paper'
 
 function ConnectButton(props: {
   node: CanvasNode
@@ -54,27 +56,13 @@ function DeleteButton(props: { node: CanvasNode; label: string }): React.JSX.Ele
   )
 }
 
-function renameTerminal(node: CanvasNode): void {
-  if (node.content.kind !== 'session') {
-    return
-  }
-  openCanvasPrompt({
-    kind: 'text',
-    title: translate('auto.components.agentCanvas.editTerminal', 'Edit terminal'),
-    label: translate('auto.components.agentCanvas.renameLabel', 'Name'),
-    confirmLabel: translate('auto.components.agentCanvas.save', 'Save'),
-    initialValue: node.content.name ?? node.content.label,
-    onSubmit: (value) => renameCanvasNodeTo(node.id, value)
-  })
-}
-
 const TOOLBAR = { 'data-canvas-node-toolbar': '' }
 
 /**
  * The reference's ContextualToolbar, per card kind, with its icons and order:
  * - terminal: Edit (square-pen) | Connect (git-branch) + count | Delete
  * - portal: Reload (rotate-cw), Connect + count | Hide/Show chrome | Close portal
- * - note: Connect + count | Delete note
+ * - note: colour (palette) | Connect + count | Delete note
  * - file tree: Show in Folder (folder-open) | Delete file tree
  * The reference also offers Restart terminal, chat mode and the prompter; Orca
  * has none of those, so they are not shown.
@@ -90,7 +78,7 @@ export function AgentCanvasNodeToolbar(props: {
       <AgentCanvasGlassToolbar {...TOOLBAR}>
         <AgentCanvasGlassButton
           label={translate('auto.components.agentCanvas.editTerminal', 'Edit terminal')}
-          onClick={() => renameTerminal(node)}
+          onClick={() => requestCanvasRename(node.id)}
         >
           <SquarePen className="size-5" />
         </AgentCanvasGlassButton>
@@ -168,6 +156,15 @@ export function AgentCanvasNodeToolbar(props: {
         role="group"
         aria-label={translate('auto.components.agentCanvas.noteTools', 'Note tools')}
       >
+        {content.kind === 'note' ? (
+          <>
+            <AgentCanvasNoteColorPicker
+              nodeId={node.id}
+              color={parseNoteColor(content.color) ?? 'yellow'}
+            />
+            <AgentCanvasToolbarDivider />
+          </>
+        ) : null}
         <ConnectButton node={node} nodes={nodes} />
         <AgentCanvasToolbarDivider />
         <DeleteButton

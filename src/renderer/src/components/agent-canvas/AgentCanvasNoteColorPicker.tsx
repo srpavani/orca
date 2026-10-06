@@ -11,46 +11,51 @@ import {
   NOTE_PAPER_CLASS
 } from './agent-canvas-note-paper'
 import { setCanvasNoteColor } from './agent-canvas-document-setters'
+import { AgentCanvasGlassButton } from './AgentCanvasGlass'
 
 /**
- * Paper-colour picker for a sticky note. Ten fixed papers rather than a colour
- * wheel: a note's colour is a label the user reads at a glance, so it has to be
- * the same ten colours in every canvas and both themes.
+ * The note toolbar's colour button: the reference's ColorPickerPopover for a
+ * sticky note — a Palette glass button opening a five-column grid of round
+ * paper swatches, the current one marked with a dot in its ink colour.
  */
 export function AgentCanvasNoteColorPicker(props: {
   nodeId: CanvasNodeId
   color: CanvasNoteColor
 }): React.JSX.Element {
-  const label = translate('auto.components.agentCanvas.noteColor', 'Note colour')
+  const [open, setOpen] = React.useState(false)
+  const label = translate('auto.components.agentCanvas.changeNoteColor', 'Change note color')
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="relative shrink-0 rounded p-0.5 opacity-50 hover:bg-foreground/10 hover:opacity-100"
-          aria-label={label}
-          title={label}
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <Palette className="size-3" />
-        </button>
+        <AgentCanvasGlassButton label={label} active={open}>
+          <Palette className="size-5" />
+        </AgentCanvasGlassButton>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-auto">
-        <div className="grid grid-cols-5 gap-1.5 p-2">
-          {NOTE_COLOR_ORDER.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={cn(
-                'size-5 rounded-full border',
-                NOTE_PAPER_CLASS[color],
-                color === props.color ? 'border-foreground' : 'border-border'
-              )}
-              aria-label={translate(NOTE_COLOR_KEYS[color], NOTE_COLOR_NAMES[color])}
-              title={translate(NOTE_COLOR_KEYS[color], NOTE_COLOR_NAMES[color])}
-              onClick={() => setCanvasNoteColor(props.nodeId, color)}
-            />
-          ))}
+      <PopoverContent align="center" sideOffset={10} className="w-auto">
+        <div role="group" aria-label={label} className="grid grid-cols-5 gap-1.5">
+          {NOTE_COLOR_ORDER.map((color) => {
+            const active = color === props.color
+            const name = translate(NOTE_COLOR_KEYS[color], NOTE_COLOR_NAMES[color])
+            return (
+              <button
+                key={color}
+                type="button"
+                aria-label={name}
+                title={name}
+                aria-pressed={active}
+                className={cn(
+                  'flex size-7 items-center justify-center rounded-full border border-black/10 transition-transform hover:scale-110',
+                  NOTE_PAPER_CLASS[color]
+                )}
+                onClick={() => {
+                  setCanvasNoteColor(props.nodeId, color)
+                  setOpen(false)
+                }}
+              >
+                {active ? <span aria-hidden className="size-2 rounded-full bg-current" /> : null}
+              </button>
+            )
+          })}
         </div>
       </PopoverContent>
     </Popover>
