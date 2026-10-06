@@ -1,210 +1,181 @@
 import React from 'react'
-import { CopyPlus, ExternalLink, GitBranch, Trash2, X } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { translate } from '@/i18n/i18n'
-import { worldRectToScreen } from '../../../../shared/spatial-canvas/geometry'
-import type { CanvasNode, CanvasViewport } from '../../../../shared/spatial-canvas/types'
 import {
-  canvasEdgesOf,
-  disconnectCanvasEdges,
-  startCanvasConnect,
-  useCanvasConnectingFrom
-} from './agent-canvas-connect-mode'
-import { duplicateCanvasNode } from './agent-canvas-node-actions'
-import { removeCanvasNode, selectCanvasNode, useAgentCanvas } from './agent-canvas-store'
+  FolderOpen,
+  GitBranch,
+  PanelTopClose,
+  PanelTopOpen,
+  RotateCw,
+  SquarePen,
+  Trash2
+} from 'lucide-react'
+import { translate } from '@/i18n/i18n'
+import type { CanvasNode } from '../../../../shared/spatial-canvas/types'
+import { startCanvasConnect, useCanvasConnectingFrom } from './agent-canvas-connect-mode'
+import { absoluteTreePath } from './agent-canvas-file-ops'
+import { renameCanvasNodeTo, toggleCanvasPortalChrome } from './agent-canvas-node-actions'
+import { openCanvasPrompt } from './agent-canvas-prompt'
+import { removeCanvasNode } from './agent-canvas-store'
+import { AgentCanvasConnectionsBadge } from './AgentCanvasConnectionsBadge'
+import {
+  AgentCanvasGlassButton,
+  AgentCanvasGlassToolbar,
+  AgentCanvasToolbarDivider
+} from './AgentCanvasGlass'
+import { requestCanvasPortalReload } from './AgentCanvasPortalBody'
 
-const GAP = 10
-
-function titleOf(node: CanvasNode): string {
-  switch (node.content.kind) {
-    case 'session':
-      return node.content.name ?? node.content.label
-    case 'note':
-      return node.content.pinnedName ?? translate('auto.components.agentCanvas.noteTitle', 'Note')
-    case 'portal':
-      return node.content.url.replace(/^https?:\/\//, '')
-    case 'fileTree':
-      return node.content.rootName
-    default:
-      return translate('auto.components.agentCanvas.cardTitle', 'Card')
-  }
-}
-
-function ToolButton(props: {
-  label: string
-  onClick: () => void
-  active?: boolean
-  destructive?: boolean
-  children: React.ReactNode
-}): React.JSX.Element {
-  return (
-    <button
-      type="button"
-      title={props.label}
-      aria-label={props.label}
-      aria-pressed={props.active}
-      className={
-        props.destructive
-          ? 'flex size-7 items-center justify-center rounded-full text-destructive hover:bg-destructive/10'
-          : props.active
-            ? 'flex size-7 items-center justify-center rounded-full bg-canvas-accent text-primary-foreground'
-            : 'flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
-      }
-      onClick={props.onClick}
-    >
-      {props.children}
-    </button>
-  )
-}
-
-/** How many wires a card has, and a list to follow or remove them (the reference's ConnectionsBadge). */
-function ConnectionsBadge(props: {
+function ConnectButton(props: {
   node: CanvasNode
   nodes: readonly CanvasNode[]
-}): React.JSX.Element | null {
-  const [open, setOpen] = React.useState(false)
-  // Re-read on every document change so the count follows wires made or removed.
-  useAgentCanvas((state) => state.document)
-  const edges = canvasEdgesOf(props.node.id)
-  if (edges.length === 0) {
-    return null
-  }
-  const otherEnd = (edge: (typeof edges)[number]): CanvasNode | undefined => {
-    const otherId = edge.fromNodeId === props.node.id ? edge.toNodeId : edge.fromNodeId
-    return props.nodes.find((node) => node.id === otherId)
-  }
+}): React.JSX.Element {
+  const connecting = useCanvasConnectingFrom()
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          title={translate('auto.components.agentCanvas.connections', 'Connections')}
-          aria-label={translate('auto.components.agentCanvas.connections', 'Connections')}
-          className="flex h-5 min-w-5 items-center justify-center rounded-full bg-canvas-accent px-1 text-[10px] font-bold text-primary-foreground"
-        >
-          {edges.length > 99 ? '99+' : edges.length}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side="bottom" align="center" className="w-64">
-        <div className="flex items-center justify-between pb-1.5">
-          <span className="text-xs font-semibold">
-            {translate('auto.components.agentCanvas.connections', 'Connections')}
-          </span>
-          <button
-            type="button"
-            className="rounded-md px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-foreground/5"
-            onClick={() => {
-              disconnectCanvasEdges(edges.map((edge) => edge.id))
-              setOpen(false)
-            }}
-          >
-            {translate('auto.components.agentCanvas.removeAllConnections', 'Remove all')}
-          </button>
-        </div>
-        <ul className="scrollbar-sleek flex max-h-64 flex-col gap-0.5 overflow-y-auto">
-          {edges.map((edge) => {
-            const other = otherEnd(edge)
-            return (
-              <li
-                key={edge.id}
-                className="flex items-center gap-1 rounded-md px-1 py-1 hover:bg-foreground/5"
-              >
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 truncate text-left text-xs"
-                  onClick={() => {
-                    if (other) {
-                      selectCanvasNode(other.id)
-                    }
-                    setOpen(false)
-                  }}
-                >
-                  {other ? titleOf(other) : '?'}
-                </button>
-                <button
-                  type="button"
-                  aria-label={translate(
-                    'auto.components.agentCanvas.removeConnection',
-                    'Remove connection'
-                  )}
-                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive"
-                  onClick={() => disconnectCanvasEdges([edge.id])}
-                >
-                  <X className="size-3.5" />
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      </PopoverContent>
-    </Popover>
+    <>
+      <AgentCanvasGlassButton
+        label={translate('auto.components.agentCanvas.connect', 'Connect')}
+        active={connecting === props.node.id}
+        onClick={() => startCanvasConnect(props.node.id)}
+      >
+        <GitBranch className="size-5" />
+      </AgentCanvasGlassButton>
+      <AgentCanvasConnectionsBadge node={props.node} nodes={props.nodes} />
+    </>
   )
 }
 
+function DeleteButton(props: { node: CanvasNode; label: string }): React.JSX.Element {
+  return (
+    <AgentCanvasGlassButton
+      label={props.label}
+      className="text-destructive"
+      onClick={() => removeCanvasNode(props.node.id)}
+    >
+      <Trash2 className="size-5" />
+    </AgentCanvasGlassButton>
+  )
+}
+
+function renameTerminal(node: CanvasNode): void {
+  if (node.content.kind !== 'session') {
+    return
+  }
+  openCanvasPrompt({
+    kind: 'text',
+    title: translate('auto.components.agentCanvas.editTerminal', 'Edit terminal'),
+    label: translate('auto.components.agentCanvas.renameLabel', 'Name'),
+    confirmLabel: translate('auto.components.agentCanvas.save', 'Save'),
+    initialValue: node.content.name ?? node.content.label,
+    onSubmit: (value) => renameCanvasNodeTo(node.id, value)
+  })
+}
+
+const TOOLBAR = { 'data-canvas-node-toolbar': '' }
+
 /**
- * The reference's contextual toolbar: floating glass above the one selected
- * card, with Connect (then click the other card), the connection count, Open
- * for a terminal, Duplicate and Delete.
+ * The reference's ContextualToolbar, per card kind, with its icons and order:
+ * - terminal: Edit (square-pen) | Connect (git-branch) + count | Delete
+ * - portal: Reload (rotate-cw), Connect + count | Hide/Show chrome | Close portal
+ * - note: Connect + count | Delete note
+ * - file tree: Show in Folder (folder-open) | Delete file tree
+ * The reference also offers Restart terminal, chat mode and the prompter; Orca
+ * has none of those, so they are not shown.
  */
 export function AgentCanvasNodeToolbar(props: {
   node: CanvasNode
   nodes: readonly CanvasNode[]
-  viewport: CanvasViewport
-  onOpen: (node: CanvasNode) => void
-}): React.JSX.Element {
-  const { node } = props
-  const connecting = useCanvasConnectingFrom()
-  const screen = worldRectToScreen(node.frame, props.viewport)
-  const isSession = node.content.kind === 'session'
-  const canDuplicate = node.content.kind !== 'session'
-  return (
-    <div
-      data-canvas-node-toolbar=""
-      role="toolbar"
-      aria-label={translate('auto.components.agentCanvas.cardToolbar', 'Card actions')}
-      className="canvas-glass pointer-events-auto absolute z-20 flex h-9 -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-full px-1.5"
-      style={{ left: screen.x + screen.width / 2, top: screen.y - GAP }}
-      onPointerDown={(event) => event.stopPropagation()}
-    >
-      <ToolButton
-        label={
-          connecting === node.id
-            ? translate(
-                'auto.components.agentCanvas.connectPickTarget',
-                'Click another card to connect'
-              )
-            : translate('auto.components.agentCanvas.connect', 'Connect')
-        }
-        active={connecting === node.id}
-        onClick={() => startCanvasConnect(node.id)}
-      >
-        <GitBranch className="size-4" />
-      </ToolButton>
-      <ConnectionsBadge node={node} nodes={props.nodes} />
-      {isSession ? (
-        <ToolButton
-          label={translate('auto.components.agentCanvas.openSession', 'Open terminal')}
-          onClick={() => props.onOpen(node)}
+}): React.JSX.Element | null {
+  const { node, nodes } = props
+  const content = node.content
+  if (content.kind === 'session') {
+    return (
+      <AgentCanvasGlassToolbar {...TOOLBAR}>
+        <AgentCanvasGlassButton
+          label={translate('auto.components.agentCanvas.editTerminal', 'Edit terminal')}
+          onClick={() => renameTerminal(node)}
         >
-          <ExternalLink className="size-4" />
-        </ToolButton>
-      ) : null}
-      {canDuplicate ? (
-        <ToolButton
-          label={translate('auto.components.agentCanvas.duplicateNode', 'Duplicate')}
-          onClick={() => duplicateCanvasNode(node.id)}
+          <SquarePen className="size-5" />
+        </AgentCanvasGlassButton>
+        <AgentCanvasToolbarDivider />
+        <ConnectButton node={node} nodes={nodes} />
+        <AgentCanvasToolbarDivider />
+        <DeleteButton
+          node={node}
+          label={translate('auto.components.agentCanvas.deleteTerminal', 'Delete terminal')}
+        />
+      </AgentCanvasGlassToolbar>
+    )
+  }
+  if (content.kind === 'portal') {
+    const hidden = content.chromeHidden === true
+    return (
+      <AgentCanvasGlassToolbar {...TOOLBAR}>
+        <AgentCanvasGlassButton
+          label={translate('auto.components.agentCanvas.portalReloadShort', 'Reload')}
+          onClick={() => requestCanvasPortalReload(node.id)}
         >
-          <CopyPlus className="size-4" />
-        </ToolButton>
-      ) : null}
-      <span className="mx-0.5 h-4 w-px bg-foreground/15" />
-      <ToolButton
-        label={translate('auto.components.agentCanvas.removeNode', 'Remove from canvas')}
-        destructive
-        onClick={() => removeCanvasNode(node.id)}
+          <RotateCw className="size-5" />
+        </AgentCanvasGlassButton>
+        <ConnectButton node={node} nodes={nodes} />
+        <AgentCanvasToolbarDivider />
+        <AgentCanvasGlassButton
+          label={
+            hidden
+              ? translate('auto.components.agentCanvas.portalShowChrome', 'Show chrome')
+              : translate('auto.components.agentCanvas.portalHideChrome', 'Hide chrome')
+          }
+          active={hidden}
+          onClick={() => toggleCanvasPortalChrome(node.id)}
+        >
+          {hidden ? <PanelTopOpen className="size-5" /> : <PanelTopClose className="size-5" />}
+        </AgentCanvasGlassButton>
+        <AgentCanvasToolbarDivider />
+        <DeleteButton
+          node={node}
+          label={translate('auto.components.agentCanvas.closePortal', 'Close portal')}
+        />
+      </AgentCanvasGlassToolbar>
+    )
+  }
+  if (content.kind === 'fileTree') {
+    return (
+      <AgentCanvasGlassToolbar
+        {...TOOLBAR}
+        role="group"
+        aria-label={translate('auto.components.agentCanvas.fileTreeTools', 'File tree tools')}
       >
-        <Trash2 className="size-4" />
-      </ToolButton>
-    </div>
-  )
+        <AgentCanvasGlassButton
+          label={translate('auto.components.agentCanvas.showInFolder', 'Show in Folder')}
+          onClick={() => {
+            const path = absoluteTreePath(content.worktreeId, '')
+            if (path) {
+              void window.api.shell.openInFileManager(path)
+            }
+          }}
+        >
+          <FolderOpen className="size-5" />
+        </AgentCanvasGlassButton>
+        <AgentCanvasToolbarDivider />
+        <DeleteButton
+          node={node}
+          label={translate('auto.components.agentCanvas.deleteFileTree', 'Delete file tree')}
+        />
+      </AgentCanvasGlassToolbar>
+    )
+  }
+  if (content.kind === 'note' || content.kind === 'text') {
+    return (
+      <AgentCanvasGlassToolbar
+        {...TOOLBAR}
+        role="group"
+        aria-label={translate('auto.components.agentCanvas.noteTools', 'Note tools')}
+      >
+        <ConnectButton node={node} nodes={nodes} />
+        <AgentCanvasToolbarDivider />
+        <DeleteButton
+          node={node}
+          label={translate('auto.components.agentCanvas.deleteNote', 'Delete note')}
+        />
+      </AgentCanvasGlassToolbar>
+    )
+  }
+  return null
 }

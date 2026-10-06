@@ -2,7 +2,9 @@ import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { TuiAgent } from '../../../../shared/tui-agent'
-import { getAgentCanvasState, placeCanvasSessionAt } from './agent-canvas-store'
+import { getAgentCanvasState } from './agent-canvas-store'
+import { placeCanvasSessionAt } from './agent-canvas-place-session'
+import { takePendingPlacement } from './agent-canvas-mode'
 import { openCanvasPrompt } from './agent-canvas-prompt'
 import { floorWorktreeIdFrom } from './agent-canvas-repo'
 
@@ -94,7 +96,12 @@ export async function createCanvasTerminal(
     // its branch's floor, so a terminal created while looking at another floor would
     // land out of sight. The board asked for it; the board should show it.
     const label = spec.name?.trim() || created?.tab?.title?.trim() || spec.agent || 'Terminal'
-    const nodeId = placeCanvasSessionAt(sessionId, label, getAgentCanvasState().activeLevelId)
+    const nodeId = placeCanvasSessionAt(
+      sessionId,
+      label,
+      getAgentCanvasState().activeLevelId,
+      takePendingPlacement()
+    )
     return { sessionId, nodeId }
   } catch (error) {
     openCanvasPrompt({

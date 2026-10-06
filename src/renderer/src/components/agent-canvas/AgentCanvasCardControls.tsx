@@ -3,7 +3,7 @@ import { Crown, Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { CanvasNode, CanvasSessionContent } from '../../../../shared/spatial-canvas/types'
-import { setCanvasSessionFlags } from './agent-canvas-store'
+import { setCanvasSessionFlags } from './agent-canvas-document-setters'
 import type { CardAgentState } from './agent-canvas-card-status'
 
 /** Status colour per state. Sonar's own verdict lives in the store; this is the card's read of it. */

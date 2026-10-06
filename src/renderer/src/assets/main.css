@@ -303,6 +303,8 @@
   --canvas-floor-shadow: 0 24px 48px rgb(0 0 0 / 0.22);
   --canvas-floor-scrim: rgb(0 0 0 / 0.3);
   --canvas-glass: rgb(255 255 255 / 0.78);
+  /* The reference's --glass-bg-rgb, for alphas the reference sets per surface. */
+  --canvas-glass-rgb: 255 255 255;
   --canvas-glass-highlight: rgb(255 255 255 / 0.7);
   --canvas-glass-text: #1d1d1f;
   --canvas-header-tint: rgb(0 0 0 / 0.06);
@@ -457,6 +459,7 @@
   --canvas-floor-shadow: 0 24px 48px rgb(0 0 0 / 0.6);
   --canvas-floor-scrim: rgb(0 0 0 / 0.55);
   --canvas-glass: rgb(44 44 46 / 0.78);
+  --canvas-glass-rgb: 44 44 46;
   --canvas-glass-highlight: rgb(255 255 255 / 0.14);
   --canvas-glass-text: #f5f5f7;
   --canvas-header-tint: rgb(255 255 255 / 0.1);
@@ -660,6 +663,17 @@ body:has(> [data-slot='dialog-overlay'], > [data-slot='sheet-overlay']) {
     0 6px 20px rgb(0 0 0 / 0.08);
   backdrop-filter: blur(12px);
 }
+/* The reference's .glass-strong: the same glass, denser, with a deeper drop. */
+@utility canvas-glass-strong {
+  background: rgb(var(--canvas-glass-rgb) / 0.78);
+  color: var(--canvas-glass-text);
+  box-shadow:
+    inset 0 0 0 0.5px var(--canvas-glass-highlight),
+    inset 0 1px 0 var(--canvas-glass-highlight),
+    0 0.5px 1.5px rgb(0 0 0 / 0.12),
+    0 10px 28px rgb(0 0 0 / 0.12);
+  backdrop-filter: blur(12px);
+}
 
 @utility canvas-node-shadow {
   box-shadow: var(--canvas-node-shadow);
@@ -715,6 +729,163 @@ body:has(> [data-slot='dialog-overlay'], > [data-slot='sheet-overlay']) {
   cursor: crosshair;
 }
 
+/* The reference's GlassButton pulse (ICON_PULSE_KEYFRAMES / ICON_PULSE_TRANSITION):
+   scale 1 -> 1.22 -> 0.97 -> 1 over 0.38s at 0/32/72/100%, easeOut, easeInOut,
+   easeOut between the stops. */
+@keyframes canvas-icon-pulse {
+  0% {
+    transform: scale(1);
+    animation-timing-function: cubic-bezier(0, 0, 0.58, 1);
+  }
+
+  32% {
+    transform: scale(1.22);
+    animation-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+  }
+
+  72% {
+    transform: scale(0.97);
+    animation-timing-function: cubic-bezier(0, 0, 0.58, 1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.canvas-icon-pulse {
+  animation: canvas-icon-pulse 0.38s both;
+}
+
+/* The reference's CANVAS_TOOLBAR_GRADIENT_CSS: top-chrome glass fades from almost
+   opaque at its top edge to translucent at the bottom. */
+[data-canvas-toolbar-gradient] .canvas-glass {
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--canvas-glass-rgb) / 0.96) 0%,
+    rgb(var(--canvas-glass-rgb) / 0.9) 48%,
+    rgb(var(--canvas-glass-rgb) / 0.74) 76%,
+    rgb(var(--canvas-glass-rgb) / 0.42) 100%
+  );
+}
+
+/* The reference's contextual toolbar entrance: CONTEXTUAL_TOOLBAR_SPRING
+   (visualDuration .3, bounce .4 -> stiffness 304.6, damping 20.94) on y and
+   scale, sampled from the spring's own equation, with opacity on a separate
+   .15s easeOut tween. Exit: .15s to y -8, scale .96, opacity 0. */
+@keyframes canvas-contextual-spring {
+  0% {
+    transform: translateY(-23.99px) scale(0.9);
+  }
+
+  5% {
+    transform: translateY(-21.41px) scale(0.9108);
+  }
+
+  10% {
+    transform: translateY(-15.92px) scale(0.9337);
+  }
+
+  15% {
+    transform: translateY(-9.92px) scale(0.9587);
+  }
+
+  20% {
+    transform: translateY(-4.78px) scale(0.9801);
+  }
+
+  25% {
+    transform: translateY(-1.18px) scale(0.9951);
+  }
+
+  30% {
+    transform: translateY(1.06px) scale(1.0044);
+  }
+
+  35% {
+    transform: translateY(2.07px) scale(1.0086);
+  }
+
+  40% {
+    transform: translateY(2.22px) scale(1.0092);
+  }
+
+  45% {
+    transform: translateY(1.87px) scale(1.0078);
+  }
+
+  50% {
+    transform: translateY(1.33px) scale(1.0055);
+  }
+
+  55% {
+    transform: translateY(0.8px) scale(1.0033);
+  }
+
+  60% {
+    transform: translateY(0.35px) scale(1.0015);
+  }
+
+  65% {
+    transform: translateY(0.04px) scale(1.0002);
+  }
+
+  70% {
+    transform: translateY(-0.13px) scale(0.9994);
+  }
+
+  75% {
+    transform: translateY(-0.2px) scale(0.9992);
+  }
+
+  80% {
+    transform: translateY(-0.2px) scale(0.9992);
+  }
+
+  85% {
+    transform: translateY(-0.16px) scale(0.9993);
+  }
+
+  90% {
+    transform: translateY(-0.11px) scale(0.9995);
+  }
+
+  95% {
+    transform: translateY(-0.06px) scale(0.9997);
+  }
+
+  100% {
+    transform: translateY(0px) scale(1);
+  }
+}
+
+@keyframes canvas-contextual-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes canvas-contextual-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+.canvas-contextual-in {
+  animation:
+    canvas-contextual-spring 0.58s linear both,
+    canvas-contextual-fade-in 0.15s ease-out both;
+}
+
+.canvas-contextual-out {
+  animation: canvas-contextual-leave 0.15s ease-out both;
+}
+
 /* A drawing in a multiple selection: the same accent glow, breathing in step. */
 @keyframes canvas-drawing-halo {
   0%,
@@ -734,8 +905,18 @@ body:has(> [data-slot='dialog-overlay'], > [data-slot='sheet-overlay']) {
 
 @media (prefers-reduced-motion: reduce) {
   .canvas-node-multiselected,
-  .canvas-drawing-multiselected {
+  .canvas-drawing-multiselected,
+  .canvas-icon-pulse {
     animation: none;
+  }
+
+  /* The reference's reduced-motion branch: opacity only, .1s. */
+  .canvas-contextual-in {
+    animation: canvas-contextual-fade-in 0.1s both;
+  }
+
+  .canvas-contextual-out {
+    animation: canvas-contextual-fade-in 0.1s reverse both;
   }
 }
 

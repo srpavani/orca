@@ -1,10 +1,15 @@
 import React from 'react'
-import { ArrowUpRight, Circle, Globe, Palette, Pencil, Square } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { ArrowUpRight, Circle, Palette, Pencil, Square } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { openAppearanceSheet } from './agent-canvas-appearance-sheet'
 import { setCanvasViewState, useAgentCanvas } from './agent-canvas-store'
+import {
+  AgentCanvasGlassButton,
+  AgentCanvasGlassToolbar,
+  AgentCanvasToolbarDivider
+} from './AgentCanvasGlass'
 
+/** The reference's TOOL_ICONS for the draw tools Orca carries: pen, arrow, rectangle, ellipse. */
 const TOOLS = [
   {
     tool: 'freehand',
@@ -12,66 +17,52 @@ const TOOLS = [
     label: () => translate('auto.components.agentCanvas.drawFreehand', 'Pen')
   },
   {
+    tool: 'arrow',
+    Icon: ArrowUpRight,
+    label: () => translate('auto.components.agentCanvas.drawArrow', 'Arrow')
+  },
+  {
     tool: 'rect',
     Icon: Square,
-    label: () => translate('auto.components.agentCanvas.drawRect', 'Box')
+    label: () => translate('auto.components.agentCanvas.drawRect', 'Rectangle')
   },
   {
     tool: 'ellipse',
     Icon: Circle,
     label: () => translate('auto.components.agentCanvas.drawEllipse', 'Ellipse')
-  },
-  {
-    tool: 'arrow',
-    Icon: ArrowUpRight,
-    label: () => translate('auto.components.agentCanvas.drawArrow', 'Arrow')
   }
 ] as const
 
-const chip =
-  'flex h-7 shrink-0 items-center gap-1 rounded-full border-0 px-2 text-xs transition-colors'
-const IDLE = 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
-
 /**
- * The canvas toolbar: what you can draw, and the portal. Floors are deliberately
- * not here — they live in the corner pill that opens the stack, which is where
- * the reference puts them, so the toolbar stays about the floor you are on.
+ * The reference's DrawToolbar, shown under the main toolbar while Draw is
+ * armed: one GlassButton per tool (size-4 icons), a divider, then the board's
+ * appearance.
  */
-export function AgentCanvasLevelBar(props: { onAddPortal: () => void }): React.JSX.Element {
+export function AgentCanvasLevelBar(): React.JSX.Element {
   const drawTool = useAgentCanvas((state) => state.drawTool)
   return (
-    <div className="canvas-glass pointer-events-auto flex max-w-[calc(100%-1.5rem)] items-center gap-0.5 overflow-x-auto rounded-2xl p-1.5">
+    <AgentCanvasGlassToolbar
+      role="toolbar"
+      aria-label={translate('auto.components.agentCanvas.drawToolbar', 'Drawing tools')}
+      className="max-w-full overflow-x-auto [scrollbar-width:none]"
+    >
       {TOOLS.map(({ tool, Icon, label }) => (
-        <button
+        <AgentCanvasGlassButton
           key={tool}
-          type="button"
-          aria-pressed={drawTool === tool}
-          aria-label={label()}
-          title={label()}
-          className={cn(chip, drawTool === tool ? 'bg-foreground/10 text-foreground' : IDLE)}
-          onClick={() => setCanvasViewState({ drawTool: drawTool === tool ? null : tool })}
+          active={drawTool === tool}
+          label={label()}
+          onClick={() => setCanvasViewState({ drawTool: tool })}
         >
-          <Icon className="size-3.5" />
-        </button>
+          <Icon className="size-4" />
+        </AgentCanvasGlassButton>
       ))}
-      <div className="mx-1 h-5 w-px shrink-0 bg-foreground/15" />
-      <button
-        type="button"
-        className={cn(chip, IDLE)}
-        title={translate('auto.components.agentCanvas.appearance', 'Appearance')}
+      <AgentCanvasToolbarDivider />
+      <AgentCanvasGlassButton
+        label={translate('auto.components.agentCanvas.appearance', 'Appearance')}
         onClick={openAppearanceSheet}
       >
-        <Palette className="size-3.5" />
-      </button>
-      <button
-        type="button"
-        className={cn(chip, IDLE)}
-        title={translate('auto.components.agentCanvas.addPortal', 'Portal')}
-        onClick={props.onAddPortal}
-      >
-        <Globe className="size-3.5" />
-        {translate('auto.components.agentCanvas.addPortal', 'Portal')}
-      </button>
-    </div>
+        <Palette className="size-4" />
+      </AgentCanvasGlassButton>
+    </AgentCanvasGlassToolbar>
   )
 }

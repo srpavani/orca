@@ -5,6 +5,15 @@ import type { CanvasNode, CanvasPortalContent } from '../../../../shared/spatial
 
 const HEADER_HEIGHT = 30
 
+/** Reload requests from outside the card (the portal toolbar's Reload), by node id. */
+const reloadListeners = new Map<string, Set<() => void>>()
+
+export function requestCanvasPortalReload(nodeId: string): void {
+  for (const listener of reloadListeners.get(nodeId) ?? []) {
+    listener()
+  }
+}
+
 /**
  * A live web page pinned on the canvas (docs, a dev server, a dashboard).
  * Sized in world units: the card scales as a whole, so zoom never relayouts the
@@ -17,6 +26,15 @@ export function AgentCanvasPortalBody(props: {
 }): React.JSX.Element {
   const { node, interactive } = props
   const [reloadKey, setReloadKey] = React.useState(0)
+  React.useEffect(() => {
+    const listener = (): void => setReloadKey((value) => value + 1)
+    const set = reloadListeners.get(node.id) ?? new Set<() => void>()
+    set.add(listener)
+    reloadListeners.set(node.id, set)
+    return () => {
+      set.delete(listener)
+    }
+  }, [node.id])
   const width = node.frame.width
   const height = Math.max(0, node.frame.height - HEADER_HEIGHT)
   return (

@@ -21,7 +21,8 @@ import {
 } from '../../../../shared/spatial-canvas/floor-hooks'
 import { translate } from '@/i18n/i18n'
 import { closeFloorHooksSheet, useFloorHooksSheetOpen } from './agent-canvas-floor-hooks-sheet'
-import { setCanvasHooks, useAgentCanvas } from './agent-canvas-store'
+import { useAgentCanvas } from './agent-canvas-store'
+import { setCanvasHooks } from './agent-canvas-document-setters'
 
 const SECTION_LABELS: Record<FloorHookSection, () => string> = {
   setup: () => translate('auto.components.agentCanvas.hooksSetup', 'Setup'),

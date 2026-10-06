@@ -10,7 +10,7 @@ import {
   NOTE_COLOR_ORDER,
   NOTE_PAPER_CLASS
 } from './agent-canvas-note-paper'
-import { setCanvasNoteColor } from './agent-canvas-store'
+import { setCanvasNoteColor } from './agent-canvas-document-setters'
 
 /**
  * Paper-colour picker for a sticky note. Ten fixed papers rather than a colour

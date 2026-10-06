@@ -21,7 +21,6 @@ import { parseNoteColor } from './agent-canvas-note-paper'
 import { AgentCanvasNoteColorPicker } from './AgentCanvasNoteColorPicker'
 import { liveSessionsFromTabs } from './agent-canvas-sessions'
 import {
-  addCanvasNote,
   disconnectCanvasEdge,
   getAgentCanvasState,
   removeCanvasNode,
@@ -39,8 +38,10 @@ import { AgentCanvasFloorHooksDialog } from './AgentCanvasFloorHooksDialog'
 import { AgentCanvasNewFloorDialog } from './AgentCanvasNewFloorDialog'
 import { AgentCanvasNewTerminalDialog } from './AgentCanvasNewTerminalDialog'
 import { AgentCanvasFloorStack } from './AgentCanvasFloorStack'
-import { AgentCanvasHeader } from './AgentCanvasHeader'
-import { AgentCanvasLevelBar } from './AgentCanvasLevelBar'
+import { AgentCanvasChrome } from './AgentCanvasChrome'
+import { AgentCanvasCreationPreview } from './AgentCanvasCreationPreview'
+import { useCanvasCreationGesture } from './use-canvas-creation-gesture'
+import { attachCanvasFile } from './agent-canvas-attach'
 import { AgentCanvasNodeCard } from './AgentCanvasNodeCard'
 import { AgentCanvasPortalBody } from './AgentCanvasPortalBody'
 import { AgentCanvasGroups } from './AgentCanvasGroups'
@@ -57,7 +58,6 @@ import { usePrefersReducedMotion } from './use-prefers-reduced-motion'
 import { useFloorOverviewKeys } from './use-floor-overview-keys'
 import { useAgentCanvasKeys } from './use-agent-canvas-keys'
 import { AgentCanvasSelectionBar } from './AgentCanvasSelectionBar'
-import { AgentCanvasNodeToolbar } from './AgentCanvasNodeToolbar'
 import { AgentCanvasZoomControl } from './AgentCanvasZoomControl'
 import { useCanvasConnectMode, useCanvasConnectingFrom } from './agent-canvas-connect-mode'
 import { useStageHeight } from './use-stage-height'
@@ -148,7 +148,6 @@ export default function AgentCanvasPage(): React.JSX.Element {
   )
 
   // The live floor's name, shown at the top of the board like the reference.
-  const activeFloorName = floorStack.find((item) => item.relativePosition === 0)?.name ?? ''
 
   const surfaceCenterWorld = (): { x: number; y: number } => {
     const surface = surfaceRef.current
@@ -190,7 +189,9 @@ export default function AgentCanvasPage(): React.JSX.Element {
     })
   }
 
-  const addPortalAtCenter = (): void => addPortalAt(surfaceCenterWorld())
+  const creationPreview = useCanvasCreationGesture(surfaceRef, (frame) =>
+    addPortalAt({ x: frame.x, y: frame.y })
+  )
 
   const liveSlotFor = (node: CanvasNode): ((element: HTMLElement | null) => void) | undefined => {
     if (node.content.kind !== 'session') {
@@ -223,10 +224,6 @@ export default function AgentCanvasPage(): React.JSX.Element {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <AgentCanvasHeader
-        onBack={closeCanvasPage}
-        onAddNote={() => addCanvasNote(surfaceCenterWorld())}
-      />
       <div
         ref={surfaceRef}
         className={cn(
@@ -365,18 +362,15 @@ export default function AgentCanvasPage(): React.JSX.Element {
             }}
           />
         ) : null}
-        {/* Why outside the stack: the chrome must not tilt with the sheets. The
-            toolbar also hides in the overview, which is what the reference does â€”
-            the stack is a mode, and the stack's own list carries the actions. */}
+        <AgentCanvasCreationPreview frame={creationPreview} viewport={viewport} />
+        {/* Outside the stack: the chrome must not tilt with the sheets, and it hides in the overview. */}
         {floorOverview ? null : (
-          // Why left-0/right-0 and not left-1/2 with a translate: a shrink-wrapped
-          // absolute box makes the toolbar's `max-w` resolve against itself, which
-          // pushed the toolbar into a horizontal scrollbar. Full width, centred
-          // content.
-          <div className="pointer-events-none absolute inset-x-0 top-2 z-20 flex flex-col items-center gap-1.5 px-3">
-            <span className="text-xs font-medium text-muted-foreground">{activeFloorName}</span>
-            <AgentCanvasLevelBar onAddPortal={addPortalAtCenter} />
-          </div>
+          <AgentCanvasChrome
+            selectedCard={selectedCard}
+            cards={cards}
+            onBack={closeCanvasPage}
+            onAttach={(file) => void attachCanvasFile(file, surfaceCenterWorld())}
+          />
         )}
         <AgentCanvasFloorList
           document={document}
@@ -386,14 +380,6 @@ export default function AgentCanvasPage(): React.JSX.Element {
           }
         />
         {floorOverview ? null : <AgentCanvasSelectionBar />}
-        {!floorOverview && selectedCard ? (
-          <AgentCanvasNodeToolbar
-            node={selectedCard}
-            nodes={cards}
-            viewport={viewport}
-            onOpen={openNode}
-          />
-        ) : null}
         <AgentCanvasPromptDialog />
         <AgentCanvasNewTerminalDialog />
         <AgentCanvasNewFloorDialog />

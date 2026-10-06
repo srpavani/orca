@@ -25,7 +25,7 @@ import {
   useNewTerminalRequest,
   type NewTerminalRequest
 } from './agent-canvas-new-terminal'
-import { setCanvasSessionFlags } from './agent-canvas-store'
+import { setCanvasSessionFlags } from './agent-canvas-document-setters'
 
 type Tab = 'details' | 'agent'
 

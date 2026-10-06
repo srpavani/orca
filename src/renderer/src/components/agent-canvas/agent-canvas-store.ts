@@ -4,30 +4,19 @@ import {
   addNode,
   connectNodes,
   createNoteNode,
-  createSessionNode,
   newCanvasId,
   patchNodeFrame,
   removeEdge,
   removeNode
 } from '../../../../shared/spatial-canvas/document'
-import { levelContents, sessionNode } from '../../../../shared/spatial-canvas/levels'
 import { bodyIdsOfNode } from '../../../../shared/spatial-canvas/node-ops'
-import type { WorkspaceHooks } from '../../../../shared/spatial-canvas/floor-hooks'
-import type { CanvasAppearance } from '../../../../shared/spatial-canvas/canvas-appearance'
 import {
-  gridSlot,
   syncSessionNodes,
   type CanvasLiveSession
 } from '../../../../shared/spatial-canvas/session-placement'
-import {
-  patchSessionFlags,
-  setNoteColor as setNoteColorInDocument,
-  type SessionFlagPatch
-} from '../../../../shared/spatial-canvas/node-flags'
 import type {
   CanvasDocument,
   CanvasEdgeId,
-  CanvasLevelId,
   CanvasNodeId,
   CanvasNoteColor,
   CanvasPoint,
@@ -190,42 +179,6 @@ export function syncCanvasSessions(sessions: readonly CanvasLiveSession[]): void
   updateDocument((document) => syncSessionNodes(document, sessions))
 }
 
-/**
- * Puts a terminal created from the board onto the floor the user is looking at.
- * The background sync would otherwise file it on its branch's floor, which is
- * not where the user is, so the card they just asked for never appears.
- */
-export function placeCanvasSessionAt(
-  sessionId: string,
-  label: string,
-  levelId: CanvasLevelId
-): string | null {
-  const existing = sessionNode(store.getState().document, sessionId)
-  if (existing) {
-    return existing.id
-  }
-  const floor = levelContents(store.getState().document, levelId) ?? store.getState().document.root
-  const node = createSessionNode({
-    sessionId,
-    label,
-    at: gridSlot(floor.nodes.filter((item) => item.content.kind === 'session').length),
-    size: store.getState().document.elementDefaults?.sessionSize
-  })
-  // Why the name is pinned: the board created this card with the name the user
-  // typed, so a later terminal-title change must not rename it.
-  const pinned = {
-    ...node,
-    content: { ...node.content, name: label }
-  }
-  store.setState(({ document }) => ({
-    document: addNode(document, pinned, levelId),
-    selectedNodeId: pinned.id,
-    selectedNodeIds: [pinned.id]
-  }))
-  schedulePersist()
-  return pinned.id
-}
-
 export function moveCanvasNode(nodeId: CanvasNodeId, at: CanvasPoint): void {
   updateDocument((document) => patchNodeFrame(document, nodeId, at))
 }
@@ -300,26 +253,6 @@ export function addCanvasNote(at: CanvasPoint, color?: CanvasNoteColor): CanvasN
   }))
   schedulePersist()
   return node.id
-}
-
-/** Recolours a sticky note. Paper colour is a property of the node, so it lives on the document. */
-/** Replaces the workspace's floor hooks. Hooks are shared by every floor. */
-export function setCanvasHooks(hooks: WorkspaceHooks): void {
-  updateDocument((document) => ({ ...document, hooks }))
-}
-
-/** Replaces the board's appearance. */
-export function setCanvasAppearance(appearance: CanvasAppearance): void {
-  updateDocument((document) => ({ ...document, appearance }))
-}
-
-/** Flips a session card's Sonar watch or its lead flag. */
-export function setCanvasSessionFlags(nodeId: CanvasNodeId, patch: SessionFlagPatch): void {
-  updateDocument((document) => patchSessionFlags(document, nodeId, patch))
-}
-
-export function setCanvasNoteColor(nodeId: CanvasNodeId, color: CanvasNoteColor): void {
-  updateDocument((document) => setNoteColorInDocument(document, nodeId, color))
 }
 
 export function writeCanvasNote(noteId: string, body: string): void {

@@ -21,7 +21,8 @@ import {
   type CanvasSelectionStyle
 } from '../../../../shared/spatial-canvas/canvas-appearance'
 import { closeAppearanceSheet, useAppearanceSheetOpen } from './agent-canvas-appearance-sheet'
-import { setCanvasAppearance, useAgentCanvas } from './agent-canvas-store'
+import { useAgentCanvas } from './agent-canvas-store'
+import { setCanvasAppearance } from './agent-canvas-document-setters'
 
 const BACKGROUND_LABELS: Record<CanvasBackgroundStyle, () => string> = {
   grid: () => translate('auto.components.agentCanvas.backgroundGrid', 'Grid'),
