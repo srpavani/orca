@@ -7,6 +7,7 @@
  * rename, disconnect, bring to front, send to back, tidy, align, lock.
  */
 
+import { alignedFrames, type CanvasAlignment } from './aligned-frames'
 import type {
   CanvasDocument,
   CanvasLevelContents,
@@ -17,7 +18,8 @@ import type {
   CanvasPoint
 } from './types'
 
-export type CanvasAlign = 'left' | 'centerX' | 'right' | 'top' | 'centerY' | 'bottom'
+/** The reference's alignment ids, including the two distributions. */
+export type CanvasAlign = CanvasAlignment
 
 /** The node and the level holding it. */
 export function findCanvasNode(
@@ -225,7 +227,11 @@ export function tidyCanvasNodes(
 
 const TIDY_GAP = 40
 
-/** Aligns cards on one edge, using their shared bounding box. */
+/**
+ * Aligns or distributes cards on one floor, by the reference's alignedFrames:
+ * edges and centres snap to the 20px grid. Cards on different floors, or too
+ * few cards for the alignment, leave the document untouched.
+ */
 export function alignCanvasNodes(
   document: CanvasDocument,
   nodeIds: readonly CanvasNodeId[],
@@ -237,43 +243,21 @@ export function alignCanvasNodes(
   if (found.length < 2 || found.some((entry) => entry.levelId !== found[0].levelId)) {
     return document
   }
-  const nodes = found.map((entry) => entry.node)
-  const left = Math.min(...nodes.map((node) => node.frame.x))
-  const right = Math.max(...nodes.map((node) => node.frame.x + node.frame.width))
-  const top = Math.min(...nodes.map((node) => node.frame.y))
-  const bottom = Math.max(...nodes.map((node) => node.frame.y + node.frame.height))
-  const moved = new Map<CanvasNodeId, { x?: number; y?: number }>()
-  for (const node of nodes) {
-    switch (align) {
-      case 'left':
-        moved.set(node.id, { x: left })
-        break
-      case 'right':
-        moved.set(node.id, { x: right - node.frame.width })
-        break
-      case 'centerX':
-        moved.set(node.id, { x: (left + right) / 2 - node.frame.width / 2 })
-        break
-      case 'top':
-        moved.set(node.id, { y: top })
-        break
-      case 'bottom':
-        moved.set(node.id, { y: bottom - node.frame.height })
-        break
-      case 'centerY':
-        moved.set(node.id, { y: (top + bottom) / 2 - node.frame.height / 2 })
-        break
-    }
+  const moved = alignedFrames(
+    new Map(found.map((entry) => [entry.node.id, entry.node.frame])),
+    align
+  )
+  if (moved.size === 0) {
+    return document
   }
   return mapCanvasLevel(document, found[0].levelId, (contents) => ({
     ...contents,
     nodes: contents.nodes.map((node) => {
-      const patch = moved.get(node.id)
-      return patch ? { ...node, frame: { ...node.frame, ...patch } } : node
+      const frame = moved.get(node.id)
+      return frame ? { ...node, frame } : node
     })
   }))
 }
-
 /** The body ids a card keeps text under: a note's or a text block's. */
 export function bodyIdsOf(content: CanvasNodeContent): string[] {
   if (content.kind === 'note') {

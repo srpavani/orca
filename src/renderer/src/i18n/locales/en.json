@@ -17681,7 +17681,24 @@
         "showInFolder": "Show in Folder",
         "deleteFileTree": "Delete file tree",
         "noteTools": "Note tools",
-        "deleteNote": "Delete note"
+        "deleteNote": "Delete note",
+        "menuAdd": "Add",
+        "menuTerminal": "Terminal",
+        "menuNewTerminal": "New Terminal…",
+        "menuNote": "Note",
+        "centerHorizontally": "Center Horizontally",
+        "centerVertically": "Center Vertically",
+        "distributeHorizontally": "Distribute Horizontally",
+        "distributeVertically": "Distribute Vertically",
+        "showChromeMenu": "Show Chrome",
+        "hideChromeMenu": "Hide Chrome",
+        "openInBrowser": "Open in Browser",
+        "copyElement": "Copy Element",
+        "duplicate": "Duplicate",
+        "elementActions": "Element actions",
+        "newElementDefaultsMenu": "New Element Defaults",
+        "useThisSizeMenu": "Use This Size",
+        "useThisColorMenu": "Use This Color"
       }
     },
     "i18n": {

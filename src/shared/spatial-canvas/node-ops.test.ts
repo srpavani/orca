@@ -202,7 +202,7 @@ describe('alignCanvasNodes', () => {
   it('aligns on the vertical middle of the selection', () => {
     const a = createNoteNode({ noteId: 'a', at: { x: 0, y: 0 } })
     const b = createNoteNode({ noteId: 'b', at: { x: 0, y: 400 } })
-    const aligned = alignCanvasNodes(withNodes([a, b]), [a.id, b.id], 'centerY')
+    const aligned = alignCanvasNodes(withNodes([a, b]), [a.id, b.id], 'centerVertically')
     const centres = aligned.root.nodes.map((node) => node.frame.y + node.frame.height / 2)
     expect(centres[0]).toBeCloseTo(centres[1] ?? 0)
   })
