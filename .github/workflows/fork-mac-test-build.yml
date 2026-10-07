@@ -1,0 +1,67 @@
+name: Fork macOS test build
+
+# Why a fork-only branch: builds an unsigned, ad-hoc-signed macOS app of the canvas
+# work for hand testing, without the stablyai signing/notary secrets the official
+# adhoc workflow needs. Runs on push to this branch only; never merge it upstream.
+
+on:
+  push:
+    branches: [mac-test-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-mac-test-build
+  cancel-in-progress: true
+
+jobs:
+  build-mac:
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/setup@v2
+        with:
+          install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            mobile/pnpm-lock.yaml
+
+      # Why both CPUs: the mac config packages x64 and arm64 from this arm64 runner.
+      - name: Install dependencies
+        uses: nick-fields/retry@v4
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: pnpm install --frozen-lockfile --cpu=current,x64,arm64
+
+      # Why: build:mobile-web resolves React Native and Expo from mobile/node_modules.
+      - uses: ./.github/actions/install-mobile-dependencies
+
+      - name: Build unsigned macOS app
+        run: pnpm build:mac
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: orca-canvas-macos
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
