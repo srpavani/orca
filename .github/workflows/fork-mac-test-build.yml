@@ -51,7 +51,14 @@ jobs:
       - uses: ./.github/actions/install-mobile-dependencies
 
       - name: Build unsigned macOS app
-        run: pnpm build:mac
+        # Why not `pnpm build:mac`: on CI electron-builder auto-publishes, which needs a release token.
+        run: |
+          pnpm run build:desktop
+          pnpm run build:computer-macos
+          pnpm run build:keyboard-layout-macos
+          pnpm run build:notification-status-macos
+          pnpm run ensure:electron-runtime
+          pnpm exec electron-builder --config config/electron-builder.config.cjs --mac --publish never
         env:
           NODE_OPTIONS: --max-old-space-size=4096
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
