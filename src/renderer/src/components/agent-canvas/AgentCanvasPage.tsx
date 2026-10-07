@@ -62,6 +62,7 @@ import {
   useCanvasConnectingFrom
 } from './agent-canvas-connect-mode'
 import { useStageHeight } from './use-stage-height'
+import { useCanvasCameraKeys } from './use-canvas-camera-keys'
 
 /**
  * A card's editable body. Notes and text blocks share one body store, so this is
@@ -199,6 +200,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
   }
 
   useAgentCanvasKeys(closeCanvasPage)
+  useCanvasCameraKeys(surfaceRef)
 
   return (
     <div className="flex h-full min-h-0 flex-col">

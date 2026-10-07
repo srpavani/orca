@@ -10,9 +10,13 @@ const Caller = {
   callerTabId: Id.optional()
 }
 
+/** The repository whose board the renderer shows; omitted is the legacy global board. */
+const ProjectKey = z.string().min(1).max(512).optional()
+
 export const AgentCanvasGetParams = z.object({
   /** When set and equal to the stored revision, the host answers `{ unchanged: true }`. */
-  sinceRevision: z.number().int().min(0).optional()
+  sinceRevision: z.number().int().min(0).optional(),
+  projectKey: ProjectKey
 })
 
 // Why: the document shape is validated structurally on the host by parseAgentCanvasSnapshot,
@@ -21,7 +25,8 @@ export const AgentCanvasSaveParams = z.object({
   baseRevision: z.number().int().min(0),
   document: z.unknown(),
   viewport: z.unknown(),
-  notes: z.record(z.string(), z.string().max(AGENT_CANVAS_NOTE_MAX_CHARS))
+  notes: z.record(z.string(), z.string().max(AGENT_CANVAS_NOTE_MAX_CHARS)),
+  projectKey: ProjectKey
 })
 
 export const AgentCanvasPeersParams = z.object({ ...Caller })
@@ -49,7 +54,33 @@ export const AgentCanvasNoteWriteParams = z.object({
 
 const PeerName = z.string().min(1).max(200)
 
+export const AgentCanvasNoteCreateParams = z.object({
+  ...Caller,
+  body: z.string().max(AGENT_CANVAS_NOTE_MAX_CHARS),
+  name: z.string().min(1).max(200).optional()
+})
+
+export const AgentCanvasNoteEditParams = z.object({
+  ...Caller,
+  note: Text,
+  oldText: z.string().min(1).max(AGENT_CANVAS_NOTE_MAX_CHARS),
+  newText: z.string().max(AGENT_CANVAS_NOTE_MAX_CHARS)
+})
+
 /** Read a peer's current screenful without sending it anything. */
+/** Raw keystrokes for a peer's TUI, e.g. picking an option in an approval menu. */
+export const AgentCanvasInputParams = z.object({
+  ...Caller,
+  to: PeerName,
+  text: z.string().min(1).max(4_000)
+})
+
+export const AgentCanvasConnectParams = z.object({
+  ...Caller,
+  from: PeerName,
+  to: PeerName
+})
+
 export const AgentCanvasCheckParams = z.object({
   ...Caller,
   to: PeerName,
@@ -59,8 +90,8 @@ export const AgentCanvasCheckParams = z.object({
 
 export const AgentCanvasRecruitParams = z.object({
   ...Caller,
-  /** Canvas name for the new terminal; it is how the team will address it. */
-  name: PeerName,
+  /** Canvas name for the new terminal; required unless `replace` keeps the current one. */
+  name: PeerName.optional(),
   /** Agent preset to launch, e.g. 'claude'. Omitted runs the user's default shell. */
   agent: z.string().min(1).max(64).optional(),
   /** Shell command to run instead of an agent. */
@@ -70,8 +101,56 @@ export const AgentCanvasRecruitParams = z.object({
   /** Working directory; defaults to the session's worktree. */
   cwd: z.string().min(1).max(4_096).optional(),
   /** Floor name to place the recruit on; defaults to the caller's floor. */
-  floor: PeerName.optional()
+  floor: PeerName.optional(),
+  /** Role preset whose prompt becomes the recruit's standing orders. */
+  role: PeerName.optional(),
+  /** Another project (repository display name) to recruit into, linked back to the caller. */
+  project: PeerName.optional(),
+  /** A teammate to swap in place: its card, wires and links survive, the process restarts. */
+  replace: PeerName.optional()
 })
+
+export const AgentCanvasDismissParams = z.object({ ...Caller, to: PeerName })
+
+export const AgentCanvasPresetListParams = z.object({ ...Caller })
+
+export const AgentCanvasRoleListParams = z.object({ ...Caller })
+
+export const AgentCanvasRoleShowParams = z.object({ ...Caller, name: PeerName })
+
+const RolePrompt = z.string().min(1).max(20_000)
+const RoleScope = z.enum(['current', 'global'])
+
+export const AgentCanvasRoleCreateParams = z.object({
+  ...Caller,
+  name: PeerName,
+  prompt: RolePrompt,
+  scope: RoleScope.optional()
+})
+
+/** `prompt` replaces the whole prompt; `oldText`/`newText` replace a substring; `scope` moves it. */
+export const AgentCanvasRoleEditParams = z.object({
+  ...Caller,
+  name: PeerName,
+  prompt: RolePrompt.optional(),
+  oldText: z.string().min(1).max(20_000).optional(),
+  newText: z.string().max(20_000).optional(),
+  scope: RoleScope.optional()
+})
+
+export const AgentCanvasRoleDeleteParams = z.object({ ...Caller, name: PeerName })
+
+/** Omitting `role` clears it. Assigning restarts the agent so it boots into the role. */
+export const AgentCanvasRoleAssignParams = z.object({
+  ...Caller,
+  to: PeerName,
+  role: PeerName.optional()
+})
+
+/** The renderer's view of project links touching the board it shows. */
+export const AgentCanvasLinksParams = z.object({ projectKey: z.string().min(1).max(512) })
+
+export const AgentCanvasLinkRemoveParams = z.object({ linkId: z.string().min(1).max(512) })
 
 export const AgentCanvasNotifyParams = z.object({
   message: z.string().min(1).max(1_000),
@@ -93,3 +172,21 @@ export const AgentCanvasFloorCreateParams = z.object({
   /** Branch to pin the floor to; sessions on that branch land on it automatically. */
   branch: z.string().min(1).max(200).optional()
 })
+
+const LandingPath = z.string().min(1).max(4_096)
+const LandingBranch = z.string().min(1).max(512)
+
+export const AgentCanvasLandingPreflightParams = z.object({ worktreePath: LandingPath })
+export const AgentCanvasLandingPreviewParams = z.object({
+  worktreePath: LandingPath,
+  target: LandingBranch
+})
+export const AgentCanvasLandingLandParams = z.object({
+  worktreePath: LandingPath,
+  target: LandingBranch
+})
+export const AgentCanvasLandingResolveParams = z.object({
+  sessionId: z.string().min(1).max(512),
+  prompt: z.string().min(1).max(20_000)
+})
+export const AgentCanvasRepoHasCommitsParams = z.object({ repoPath: z.string().min(1) })

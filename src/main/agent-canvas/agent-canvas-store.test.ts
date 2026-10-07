@@ -3,8 +3,18 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createDocument } from '../../shared/spatial-canvas/document'
-import { AGENT_CANVAS_FILENAME, AgentCanvasStore } from './agent-canvas-store'
-import { resolveCallerSessionId, saveCanvasFromClient } from './agent-canvas-host'
+import {
+  AGENT_CANVAS_FILENAME,
+  AgentCanvasBoards,
+  AgentCanvasStore,
+  PROJECT_CANVAS_DIRNAME,
+  projectCanvasFilename
+} from './agent-canvas-store'
+import {
+  canvasProjectKeyOf,
+  resolveCallerSessionId,
+  saveCanvasFromClient
+} from './agent-canvas-host'
 
 const dirs: string[] = []
 
@@ -81,6 +91,39 @@ describe('AgentCanvasStore', () => {
     unsubscribe()
     store.update((current) => current)
     expect(seen).toEqual([1])
+  })
+})
+
+describe('AgentCanvasBoards', () => {
+  it('keeps each project on its own board, outside the repository', () => {
+    const dir = tempDir()
+    const boards = new AgentCanvasBoards(dir)
+    boards.board('repo-a').update((current) => ({ ...current, notes: { a: 'only a' } }))
+    expect(boards.board('repo-b').get().notes).toEqual({})
+    expect(boards.board(null).get().notes).toEqual({})
+    const saved = JSON.parse(
+      readFileSync(join(dir, PROJECT_CANVAS_DIRNAME, projectCanvasFilename('repo-a')), 'utf8')
+    )
+    expect(saved.notes).toEqual({ a: 'only a' })
+    expect(new AgentCanvasBoards(dir).board('repo-a').get().notes).toEqual({ a: 'only a' })
+  })
+
+  it('opens a new project on a copy of the legacy global board', () => {
+    const dir = tempDir()
+    new AgentCanvasStore(dir).update((current) => ({ ...current, notes: { old: 'kept' } }))
+    const board = new AgentCanvasBoards(dir).board('repo-a')
+    expect(board.get()).toMatchObject({ notes: { old: 'kept' }, revision: 0 })
+  })
+
+  it('never lets a project key escape the canvas directory', () => {
+    const name = projectCanvasFilename('../../etc/passwd')
+    expect(name).not.toMatch(/[/\\]/)
+    expect(name).not.toBe(projectCanvasFilename('.._.._etc_passwd'))
+  })
+
+  it("resolves an agent's project from its terminal's worktree", () => {
+    expect(canvasProjectKeyOf({ worktreeId: 'repo-a::/work/repo-a' })).toBe('repo-a')
+    expect(canvasProjectKeyOf({ worktreeId: '' })).toBeNull()
   })
 })
 

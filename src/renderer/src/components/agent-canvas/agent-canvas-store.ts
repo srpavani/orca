@@ -44,18 +44,24 @@ type AgentCanvasState = Omit<AgentCanvasSnapshot, 'revision'> & {
   floorOverview: boolean
   /** Wires a message is crossing right now; they draw in the accent, thicker. */
   activeEdgeIds: readonly string[]
+  /** Repository whose board is shown; null is the legacy global board. */
+  projectKey: string | null
 }
 
 const LOCAL_RUNTIME = { kind: 'local' } as const
 
-const transport: CanvasHostTransport = {
-  get: (sinceRevision) =>
-    callRuntimeRpc(
-      LOCAL_RUNTIME,
-      'canvas.get',
-      sinceRevision === undefined ? {} : { sinceRevision }
-    ),
-  save: (input) => callRuntimeRpc(LOCAL_RUNTIME, 'canvas.save', input)
+// Why the key is bound per call: a reply must land on the board it was asked
+// for, even if the user switched project while it was in flight.
+function transportFor(projectKey: string | null): CanvasHostTransport {
+  const project = projectKey === null ? {} : { projectKey }
+  return {
+    get: (sinceRevision) =>
+      callRuntimeRpc(LOCAL_RUNTIME, 'canvas.get', {
+        ...(sinceRevision === undefined ? {} : { sinceRevision }),
+        ...project
+      }),
+    save: (input) => callRuntimeRpc(LOCAL_RUNTIME, 'canvas.save', { ...input, ...project })
+  }
 }
 
 const initial = emptyAgentCanvasSnapshot()
@@ -71,12 +77,14 @@ const store = createStore<AgentCanvasState>(() => ({
   activeLevelId: null,
   drawTool: null,
   floorOverview: false,
-  activeEdgeIds: []
+  activeEdgeIds: [],
+  projectKey: null
 }))
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 let pushing = false
 let saveHoneymoon = 0
+const pollers = new Set<() => Promise<void>>()
 
 function adoptHost(snapshot: AgentCanvasSnapshot, keepLocalEdits: boolean): void {
   store.setState((state) => ({
@@ -110,11 +118,14 @@ async function flushToHost(): Promise<void> {
   const sent = store.getState()
   try {
     const saved = await pushToHost(
-      transport,
+      transportFor(sent.projectKey),
       { document: sent.document, viewport: sent.viewport, notes: sent.notes },
       { revision: sent.hostRevision, notes: sent.hostNotes }
     )
     const now = store.getState()
+    if (now.projectKey !== sent.projectKey) {
+      return
+    }
     // Why: if the user kept editing while the save was in flight, keep those edits and push again.
     const editedMeanwhile =
       now.document !== sent.document || now.notes !== sent.notes || now.viewport !== sent.viewport
@@ -140,9 +151,12 @@ export function startCanvasHostSync(intervalMs = 1500): () => void {
     if (now < saveHoneymoon) {
       return
     }
-    const { loaded, hostRevision } = store.getState()
+    const { loaded, hostRevision, projectKey } = store.getState()
     try {
-      const result = await transport.get(loaded ? hostRevision : undefined)
+      const result = await transportFor(projectKey).get(loaded ? hostRevision : undefined)
+      if (store.getState().projectKey !== projectKey) {
+        return
+      }
       const lit = result.activeEdges ?? []
       if (lit.join() !== store.getState().activeEdgeIds.join()) {
         store.setState({ activeEdgeIds: lit })
@@ -155,9 +169,11 @@ export function startCanvasHostSync(intervalMs = 1500): () => void {
     }
   }
   void poll()
+  pollers.add(poll)
   const timer = setInterval(() => void poll(), intervalMs)
   return () => {
     stopped = true
+    pollers.delete(poll)
     clearInterval(timer)
   }
 }
@@ -302,4 +318,37 @@ export function setCanvasViewState(
   >
 ): void {
   store.setState(patch)
+}
+
+/**
+ * Shows another project's board. Pending edits are flushed to the board they
+ * were made on first, then the view empties until the new board arrives.
+ */
+export function setCanvasProjectContext(projectKey: string | null): void {
+  if (store.getState().projectKey === projectKey) {
+    return
+  }
+  if (persistTimer !== null) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+    // Why before the reset: flushToHost captures the current board synchronously.
+    void flushToHost()
+  }
+  store.setState({
+    document: initial.document,
+    viewport: initial.viewport,
+    notes: initial.notes,
+    hostRevision: 0,
+    hostNotes: {},
+    loaded: false,
+    activeLevelId: null,
+    selectedNodeId: null,
+    selectedNodeIds: [],
+    floorOverview: false,
+    activeEdgeIds: [],
+    projectKey
+  })
+  for (const poll of pollers) {
+    void poll()
+  }
 }

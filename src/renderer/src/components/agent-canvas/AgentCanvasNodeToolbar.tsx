@@ -16,6 +16,7 @@ import { toggleCanvasPortalChrome } from './agent-canvas-node-actions'
 import { requestCanvasRename } from './AgentCanvasRenamePopover'
 import { removeCanvasNode } from './agent-canvas-store'
 import { AgentCanvasConnectionsBadge } from './AgentCanvasConnectionsBadge'
+import { AgentCanvasProjectLinksBadge } from './AgentCanvasProjectLinksBadge'
 import {
   AgentCanvasGlassButton,
   AgentCanvasGlassToolbar,
@@ -40,6 +41,7 @@ function ConnectButton(props: {
         <GitBranch className="size-5" />
       </AgentCanvasGlassButton>
       <AgentCanvasConnectionsBadge node={props.node} nodes={props.nodes} />
+      <AgentCanvasProjectLinksBadge node={props.node} />
     </>
   )
 }

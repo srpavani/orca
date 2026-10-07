@@ -7,6 +7,7 @@ import {
 } from '../../../../shared/spatial-canvas/geometry'
 import type { CanvasNode } from '../../../../shared/spatial-canvas/types'
 import { getAgentCanvasState, setCanvasViewport } from './agent-canvas-store'
+import { glideCanvasViewport } from './agent-canvas-camera'
 
 type ViewControls = {
   /** Zoom one step, keeping the stage's centre still. */
@@ -45,7 +46,7 @@ export function useCanvasViewControls(input: {
       stageSizeOf(latest.current.surfaceRef.current)
     )
     if (fitted) {
-      setCanvasViewport(fitted)
+      glideCanvasViewport(fitted, stageSizeOf(latest.current.surfaceRef.current))
     }
   }
 
@@ -56,8 +57,15 @@ export function useCanvasViewControls(input: {
     setCanvasViewport(zoomAtPoint(getAgentCanvasState().viewport, zoom, centre))
   }
 
+  // Why a glide only for the steps: the pill's scrub must track the pointer exactly.
   const zoomBy = (direction: 1 | -1): void => {
-    zoomTo(nextZoomLevel(getAgentCanvasState().viewport.zoom, direction, null))
+    const stage = stageSizeOf(latest.current.surfaceRef.current)
+    const viewport = getAgentCanvasState().viewport
+    const zoom = nextZoomLevel(viewport.zoom, direction, null)
+    glideCanvasViewport(
+      zoomAtPoint(viewport, zoom, { x: stage.width / 2, y: stage.height / 2 }),
+      stage
+    )
   }
 
   const signature = input.cards.map((node) => node.id).join(',')

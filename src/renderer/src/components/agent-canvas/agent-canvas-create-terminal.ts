@@ -8,6 +8,8 @@ import { takePendingPlacement } from './agent-canvas-mode'
 import { openCanvasPrompt } from './agent-canvas-prompt'
 import { floorWorktreeIdFrom } from './agent-canvas-repo'
 import { canvasSessionIdOf } from '../../../../shared/spatial-canvas/session-placement'
+import { findNode } from '../../../../shared/spatial-canvas/levels'
+import { revealCanvasCard } from './agent-canvas-camera'
 
 export type CanvasTerminalPreset = {
   /** Omitted runs the user's default shell. */
@@ -108,6 +110,10 @@ export async function createCanvasTerminal(
       getAgentCanvasState().activeLevelId,
       takePendingPlacement()
     )
+    const placed = nodeId === null ? null : findNode(getAgentCanvasState().document, nodeId)
+    if (placed) {
+      revealCanvasCard(placed.frame)
+    }
     return { sessionId, nodeId }
   } catch (error) {
     openCanvasPrompt({

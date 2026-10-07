@@ -4,7 +4,8 @@ import type { AgentCanvasSnapshot } from '../../shared/spatial-canvas/agent-canv
 import { sessionNode } from '../../shared/spatial-canvas/levels'
 import { findLevelByName, placeRecruit } from '../../shared/spatial-canvas/recruit'
 import { duplicateSessionLabel } from '../../shared/spatial-canvas/reachability'
-import type { CanvasLevelId } from '../../shared/spatial-canvas/types'
+import { mapAllLevels } from '../../shared/spatial-canvas/document'
+import type { CanvasDocument, CanvasLevelId, CanvasNodeId } from '../../shared/spatial-canvas/types'
 import { AgentCanvasAccessError } from './agent-canvas-peers'
 
 export type RecruitedTerminal = { tabId: string; handle: string }
@@ -49,6 +50,10 @@ export async function recruitAgent(input: {
   prompt?: string
   cwd?: string
   floor?: string
+  /** Role assigned to the card; its briefing is already in `prompt`. */
+  roleId?: string | null
+  /** The caller's own agent: a recruit with no preset and no command is a copy of it. */
+  callerAgent?: TuiAgent
   signal?: AbortSignal
 }): Promise<{
   sessionId: string
@@ -97,8 +102,12 @@ export async function recruitAgent(input: {
       `A session named "${input.name}" is already on the canvas. Pick another name, or ask the existing one.`
     )
   }
-  const created = await spawnTerminal(input)
-  const term = await waitForTerminal(input, created.tab.terminal)
+  const term = await spawnRecruitTerminal(
+    input.runtime,
+    input.callerWorktreeId,
+    input,
+    input.signal
+  )
   const placed = placeRecruit(input.snapshot.document, {
     callerNodeId: callerNode.id,
     sessionId: term.tabId,
@@ -117,19 +126,64 @@ export async function recruitAgent(input: {
     handle: term.handle,
     levelId: placed.levelId,
     bridged: placed.bridged,
-    document: placed.document
+    document: withRole(placed.document, placed.nodeId, input.roleId ?? null)
   }
 }
 
-function spawnTerminal(input: {
-  runtime: AgentCanvasRecruitRuntime
-  callerWorktreeId: string
+/** Sets the role a card shows; a null role leaves the card as placed. */
+export function withRole(
+  document: CanvasDocument,
+  nodeId: CanvasNodeId,
+  roleId: string | null
+): CanvasDocument {
+  if (roleId === null) {
+    return document
+  }
+  return mapAllLevels(document, (contents) => ({
+    ...contents,
+    nodes: contents.nodes.map((node) =>
+      node.id === nodeId && node.content.kind === 'session'
+        ? { ...node, content: { ...node.content, roleId } }
+        : node
+    )
+  }))
+}
+
+export type RecruitLaunch = {
   agent?: string
   command?: string
   prompt?: string
   cwd?: string
-}): Promise<{ tab: { terminal: string | null } }> {
-  const agent = input.agent !== undefined && isTuiAgent(input.agent) ? input.agent : undefined
+  callerAgent?: TuiAgent
+}
+
+/**
+ * Spawns a terminal in `worktreeId` and waits until it is up. Shared by recruit,
+ * replace and cross-project recruits, which differ only in where the card goes.
+ */
+export async function spawnRecruitTerminal(
+  runtime: AgentCanvasRecruitRuntime,
+  worktreeId: string,
+  launch: RecruitLaunch,
+  signal?: AbortSignal
+): Promise<RecruitedTerminal> {
+  // Why the list before the spawn: without a handle, only a tab that did not exist yet is ours.
+  const before = new Set((await runtime.listTerminals()).terminals.map((row) => row.tabId))
+  const created = await spawnTerminal({ runtime, callerWorktreeId: worktreeId, ...launch })
+  return waitForTerminal({ runtime, signal }, created.tab.terminal, before)
+}
+
+function spawnTerminal(
+  input: RecruitLaunch & { runtime: AgentCanvasRecruitRuntime; callerWorktreeId: string }
+): Promise<{ tab: { terminal: string | null } }> {
+  // Why the caller's agent by default: the reference recruits "a copy of yourself"
+  // when no preset is named; a bare shell could not take a prompt at all.
+  const agent =
+    input.agent !== undefined && isTuiAgent(input.agent)
+      ? input.agent
+      : input.command === undefined
+        ? input.callerAgent
+        : undefined
   return input.runtime
     .createMobileSessionTerminal(`id:${input.callerWorktreeId}`, {
       // Why not activate: recruiting from an agent must not steal the user's focus
@@ -151,7 +205,8 @@ function spawnTerminal(input: {
 
 async function waitForTerminal(
   input: { runtime: AgentCanvasRecruitRuntime; signal?: AbortSignal },
-  handle: string | null
+  handle: string | null,
+  existingTabIds: ReadonlySet<string>
 ): Promise<RecruitedTerminal> {
   const deadline = Date.now() + SPAWN_TIMEOUT_MS
   while (Date.now() < deadline) {
@@ -160,7 +215,9 @@ async function waitForTerminal(
     }
     const { terminals } = await input.runtime.listTerminals()
     const match = terminals.find(
-      (terminal) => (handle === null || terminal.handle === handle) && terminal.connected
+      (terminal) =>
+        (handle === null ? !existingTabIds.has(terminal.tabId) : terminal.handle === handle) &&
+        terminal.connected
     )
     if (match) {
       return { tabId: match.tabId, handle: match.handle }

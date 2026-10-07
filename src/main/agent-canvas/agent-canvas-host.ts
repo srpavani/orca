@@ -14,18 +14,36 @@ import { AgentCanvasAccessError } from './agent-canvas-peers'
 import { notifyUser } from './agent-canvas-notify'
 import { AgentCanvasSonar, type SonarRuntime } from './agent-canvas-sonar'
 import { sonarMessage } from '../../shared/spatial-canvas/sonar'
-import { AgentCanvasStore } from './agent-canvas-store'
+import { getRepoIdFromWorktreeId } from '../../shared/worktree/id'
+import { AgentCanvasBoards, type AgentCanvasStore } from './agent-canvas-store'
+import { AgentCanvasRoleStore } from './agent-canvas-roles'
+import { AgentCanvasCrossLinks } from './agent-canvas-cross-links'
+import type { TeamReachSources } from './agent-canvas-team-reach'
 
-let store: AgentCanvasStore | null = null
+let boards: AgentCanvasBoards | null = null
 
-/** One store per process, created on first use so tests and the CLI never touch disk early. */
-export function getAgentCanvasStore(): AgentCanvasStore {
-  store ??= new AgentCanvasStore(getAppEnvironment().getPath('userData'))
-  return store
+/** One registry per process, created on first use so tests and the CLI never touch disk early. */
+export function getAgentCanvasBoards(): AgentCanvasBoards {
+  boards ??= new AgentCanvasBoards(getAppEnvironment().getPath('userData'))
+  return boards
 }
 
-export function setAgentCanvasStoreForTests(next: AgentCanvasStore | null): void {
-  store = next
+/** The board for a project key; null/omitted is the legacy global board. */
+export function getAgentCanvasStore(projectKey?: string | null): AgentCanvasStore {
+  return getAgentCanvasBoards().board(projectKey)
+}
+
+export function setAgentCanvasBoardsForTests(next: AgentCanvasBoards | null): void {
+  boards = next
+}
+
+/**
+ * The project an agent's canvas commands act on: the repository its terminal
+ * runs in. Why derived on the host rather than sent by the CLI: the board the
+ * user wired in the UI is the repo's, so `ask`/`peers` must read that same graph.
+ */
+export function canvasProjectKeyOf(caller: Pick<CanvasLiveSession, 'worktreeId'>): string | null {
+  return caller.worktreeId ? getRepoIdFromWorktreeId(caller.worktreeId) : null
 }
 
 export type AgentCanvasSaveResult =
@@ -143,32 +161,73 @@ export function ensureCallerPlaced(
   }))
 }
 
-let sonar: AgentCanvasSonar | null = null
+const sonars = new Map<string | null, AgentCanvasSonar>()
 
 /**
  * Starts Sonar on first canvas use. Why lazy rather than at boot: a user who
  * never opens the canvas pays nothing for the watch, and the canvas knows its
  * runtime from the first RPC that drives it.
  */
-export function ensureSonarRunning(target: AgentCanvasStore, runtime: SonarRuntime): void {
-  if (sonar !== null) {
+export function ensureSonarRunning(
+  target: AgentCanvasStore,
+  runtime: SonarRuntime,
+  projectKey: string | null = null
+): void {
+  if (sonars.has(projectKey)) {
     return
   }
-  sonar = new AgentCanvasSonar(target, runtime, (notification) => {
+  // Why one watch per board: each project's cards carry their own watched flags.
+  const sonar = new AgentCanvasSonar(target, runtime, (notification) => {
     // Why delivered from here: the watcher decides *whether* to speak, the
     // notification module decides how. Keeping them apart is what lets the
     // decision be tested without Electron.
     const text = sonarMessage(notification)
     notifyUser(text.body, text.title)
   })
+  sonars.set(projectKey, sonar)
   sonar.start()
 }
 
 export function stopSonar(): void {
-  sonar?.stop()
-  sonar = null
+  for (const sonar of sonars.values()) {
+    sonar.stop()
+  }
+  sonars.clear()
 }
 
-export function getSonar(): AgentCanvasSonar | null {
-  return sonar
+export function getSonar(projectKey: string | null = null): AgentCanvasSonar | null {
+  return sonars.get(projectKey) ?? null
+}
+
+let roles: AgentCanvasRoleStore | null = null
+let crossLinks: AgentCanvasCrossLinks | null = null
+
+export function getAgentCanvasRoles(): AgentCanvasRoleStore {
+  roles ??= new AgentCanvasRoleStore(getAppEnvironment().getPath('userData'))
+  return roles
+}
+
+export function getAgentCanvasCrossLinks(): AgentCanvasCrossLinks {
+  crossLinks ??= new AgentCanvasCrossLinks(getAppEnvironment().getPath('userData'))
+  return crossLinks
+}
+
+export function setAgentCanvasTeamStoresForTests(
+  next: { roles?: AgentCanvasRoleStore | null; crossLinks?: AgentCanvasCrossLinks | null } = {}
+): void {
+  roles = next.roles ?? null
+  crossLinks = next.crossLinks ?? null
+}
+
+/** The runtime's repository list; only the name is needed, for `Name @ Project`. */
+export type RepoLister = { listRepos?(): readonly { id: string; displayName: string }[] }
+
+/** Where a project link's far end lives: its own board, named by its repository. */
+export function teamReachSources(runtime: RepoLister): TeamReachSources {
+  return {
+    links: getAgentCanvasCrossLinks(),
+    boardOf: (projectKey) => getAgentCanvasStore(projectKey).get(),
+    projectName: (projectKey) =>
+      runtime.listRepos?.().find((repo) => repo.id === projectKey)?.displayName ?? projectKey
+  }
 }

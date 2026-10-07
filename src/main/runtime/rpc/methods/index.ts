@@ -50,6 +50,10 @@ import { AGENT_HOOK_METHODS } from './agent-hooks'
 import { AGENT_LAUNCH_METHODS } from './agent-launch'
 import { AGENT_CANVAS_METHODS } from './agent-canvas'
 import { AGENT_CANVAS_LANDING_METHODS } from './agent-canvas-landing'
+import { AGENT_CANVAS_TEAM_METHODS } from './agent-canvas-team'
+import { AGENT_CANVAS_TALK_METHODS } from './agent-canvas-talk'
+import { AGENT_CANVAS_CREW_METHODS } from './agent-canvas-crew'
+import { AGENT_CANVAS_ROLE_METHODS } from './agent-canvas-roles'
 
 // Why: a flat manifest keeps registration order explicit and provides one
 // grep-point for "what methods does the RPC server expose?" — useful when
@@ -61,6 +65,10 @@ export const ALL_RPC_METHODS = [
   ...ARTIFACT_METHODS,
   ...AGENT_CANVAS_METHODS,
   ...AGENT_CANVAS_LANDING_METHODS,
+  ...AGENT_CANVAS_TEAM_METHODS,
+  ...AGENT_CANVAS_TALK_METHODS,
+  ...AGENT_CANVAS_CREW_METHODS,
+  ...AGENT_CANVAS_ROLE_METHODS,
   ...AUTOMATION_METHODS,
   ...REPO_METHODS,
   ...WORKTREE_METHODS,

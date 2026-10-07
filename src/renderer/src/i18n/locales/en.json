@@ -17661,6 +17661,7 @@
         "backToApp": "Back to app",
         "manageConnections": "Manage Connections",
         "removeConnectionTo": "Remove connection to {{name}}",
+        "projectLinks": "Other Projects",
         "drawToolbar": "Drawing tools",
         "toolSelect": "Selection",
         "toolTerminal": "Add terminal",

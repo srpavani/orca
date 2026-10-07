@@ -20,6 +20,7 @@ import { ARTIFACT_COMMAND_SPECS } from './artifacts'
 import { SEARCH_COMMAND_SPECS } from './search'
 import { PROFILE_STATE_COMMAND_SPECS } from './profile-state'
 import { CANVAS_COMMAND_SPECS } from './canvas'
+import { CANVAS_CREW_COMMAND_SPECS } from './canvas-crew'
 
 export const COMMAND_SPECS: CommandSpec[] = [
   ...CORE_COMMAND_SPECS,
@@ -32,6 +33,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   ...BROWSER_ADVANCED_COMMAND_SPECS,
   ...ORCHESTRATION_COMMAND_SPECS,
   ...CANVAS_COMMAND_SPECS,
+  ...CANVAS_CREW_COMMAND_SPECS,
   ...COMPUTER_COMMAND_SPECS,
   ...AGENT_HOOK_COMMAND_SPECS,
   ...DIAGNOSTICS_COMMAND_SPECS,

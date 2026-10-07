@@ -2,6 +2,8 @@ import type { CommandHandler, HandlerContext } from '../dispatch'
 import { printResult } from '../format'
 import { getOptionalPositiveIntegerFlag, getRequiredStringFlag } from '../flags'
 import { CANVAS_STATUS_HANDLERS } from './canvas-status'
+import { CANVAS_TEAM_HANDLERS, askRaw } from './canvas-team'
+import { CANVAS_CREW_HANDLERS } from './canvas-crew'
 
 type SessionPeer = { sessionId: string; label: string; isLead: boolean }
 type NoteView = {
@@ -22,6 +24,7 @@ type AskResult = {
   reply: string
   settled: boolean
   blockedReason?: string
+  delivered?: 'reply'
 }
 
 // Why: ask legitimately outlives the CLI's generic RPC timeout; leave headroom over the server wait.
@@ -68,6 +71,9 @@ export function formatPeers(result: PeersResult): string {
 }
 
 export function formatAsk(result: AskResult): string {
+  if (result.delivered === 'reply') {
+    return `Delivered to ${result.peer.label} as the reply to their ask.`
+  }
   const header = `── reply from ${result.peer.label} ──`
   const footer = result.settled
     ? ''
@@ -81,6 +87,11 @@ async function peers(ctx: HandlerContext): Promise<void> {
 }
 
 async function ask(ctx: HandlerContext): Promise<void> {
+  const raw = ctx.flags.get('raw')
+  if (typeof raw === 'string' && raw.length > 0) {
+    await askRaw(ctx, raw)
+    return
+  }
   const batch = ctx.flags.get('batch')
   if (typeof batch === 'string' && batch.length > 0) {
     await askBatch(ctx, batch)
@@ -182,12 +193,6 @@ type CheckResult = {
   output: string
   lines: number
 }
-type RecruitResult = {
-  session: { sessionId: string; label: string; handle: string }
-  floor: string | null
-  bridged: boolean
-  revision: number
-}
 type NotifyResult = { delivered: boolean; reason?: string }
 
 async function check(ctx: HandlerContext): Promise<void> {
@@ -202,36 +207,6 @@ async function check(ctx: HandlerContext): Promise<void> {
     ctx.json,
     (result) => `── ${result.peer.label} is showing ──\n${result.output || '(no output)'}`
   )
-}
-
-async function recruit(ctx: HandlerContext): Promise<void> {
-  const name = getRequiredStringFlag(ctx.flags, 'name')
-  const response = await ctx.client.call<RecruitResult>(
-    'canvas.recruit',
-    {
-      ...callerParams(),
-      name,
-      ...optional('agent', ctx),
-      ...optional('command', ctx),
-      ...optional('prompt', ctx),
-      ...optional('cwd', ctx),
-      ...optional('floor', ctx)
-    },
-    // Spawning a terminal is slower than a read; leave room for the PTY to come up.
-    { timeoutMs: 60_000 }
-  )
-  printResult(response, ctx.json, formatRecruit)
-}
-
-function formatRecruit(result: RecruitResult): string {
-  const where = result.floor === null ? 'the ground floor' : 'its own floor'
-  const link = result.bridged ? 'bridged to you' : 'wired to you'
-  return `Recruited "${result.session.label}" (${result.session.sessionId}) on ${where}, ${link}.`
-}
-
-function optional(flag: string, ctx: HandlerContext): Record<string, string> {
-  const value = ctx.flags.get(flag)
-  return typeof value === 'string' && value.length > 0 ? { [flag]: value } : {}
 }
 
 async function notify(ctx: HandlerContext): Promise<void> {
@@ -250,8 +225,9 @@ export const CANVAS_HANDLERS: Record<string, CommandHandler> = {
   'canvas peers': peers,
   'canvas ask': ask,
   'canvas check': check,
+  ...CANVAS_TEAM_HANDLERS,
+  ...CANVAS_CREW_HANDLERS,
   ...CANVAS_STATUS_HANDLERS,
-  'canvas recruit': recruit,
   'canvas notify': notify,
   'canvas note read': noteRead,
   'canvas note write': noteWrite

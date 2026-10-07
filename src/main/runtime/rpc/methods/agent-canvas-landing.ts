@@ -1,5 +1,11 @@
-import { z } from 'zod'
 import { defineMethod } from '../core'
+import {
+  AgentCanvasLandingLandParams,
+  AgentCanvasLandingPreflightParams,
+  AgentCanvasLandingPreviewParams,
+  AgentCanvasLandingResolveParams,
+  AgentCanvasRepoHasCommitsParams
+} from '../../../../shared/rpc-contract/agent-canvas-params'
 import {
   landFloor,
   landingPreflight,
@@ -8,17 +14,6 @@ import {
 } from '../../../agent-canvas/floor-landing'
 import { extractExecError } from '../../../git/exec-error'
 import { gitExecFileAsync } from '../../../git/runner'
-
-const Path = z.string().min(1).max(4_096)
-const Branch = z.string().min(1).max(512)
-
-const LandingPreflightParams = z.object({ worktreePath: Path })
-const LandingPreviewParams = z.object({ worktreePath: Path, target: Branch })
-const LandingLandParams = z.object({ worktreePath: Path, target: Branch })
-const LandingResolveParams = z.object({
-  sessionId: z.string().min(1).max(512),
-  prompt: z.string().min(1).max(20_000)
-})
 
 /** The two runtime calls a delivery needs; the same ones `canvas.ask` drives. */
 type ResolveRuntime = {
@@ -70,30 +65,30 @@ const runGit: GitRun = async (args, cwd) => {
 export const AGENT_CANVAS_LANDING_METHODS = [
   defineMethod({
     name: 'canvas.landingPreflight',
-    params: LandingPreflightParams,
+    params: AgentCanvasLandingPreflightParams,
     handler: async (params) => landingPreflight(runGit, params.worktreePath)
   }),
   defineMethod({
     name: 'canvas.landingPreview',
-    params: LandingPreviewParams,
+    params: AgentCanvasLandingPreviewParams,
     handler: async (params) => landingPreview(runGit, params.worktreePath, params.target)
   }),
   defineMethod({
     name: 'canvas.landFloor',
-    params: LandingLandParams,
+    params: AgentCanvasLandingLandParams,
     handler: async (params) => landFloor(runGit, params.worktreePath, params.target)
   }),
   defineMethod({
     // The reference refuses a floor on a repository with no commits
     // (repositoryHasNoCommits): there is nothing to branch a worktree from.
     name: 'canvas.repoHasCommits',
-    params: z.object({ repoPath: z.string().min(1) }),
+    params: AgentCanvasRepoHasCommitsParams,
     handler: async (params) =>
       (await runGit(['rev-parse', '--verify', '--quiet', 'HEAD'], params.repoPath)).exitCode === 0
   }),
   defineMethod({
     name: 'canvas.landingResolve',
-    params: LandingResolveParams,
+    params: AgentCanvasLandingResolveParams,
     handler: async (params, { runtime }) =>
       deliverResolvePrompt(runtime as unknown as ResolveRuntime, params.sessionId, params.prompt)
   })

@@ -66,6 +66,23 @@ prompt, with terminal escapes stripped.
   short and only when you need the answer to continue.
 - The reply is the peer's terminal output, so it may contain tool chatter. Extract the answer;
   if it is unclear, ask a narrower follow-up instead of guessing.
+- **Long answers: use ask back.** A screen holds one page, and every agent (Claude Code, Codex,
+  …) paints it differently. Tell the peer to report with `ORCA canvas ask "<your label>"
+  "<result>"` when done. That message answers your waiting `ask` in full (`source: "ask-back"`)
+  instead of being typed into your terminal.
+
+## When an ask reaches you
+
+A prompt that starts with `[Agent Canvas] Message from "<label>"` is a peer waiting on you. Answer
+in your normal output for a short reply. For anything longer than a screen — a review, a plan, a
+diff summary — finish the work, then send the whole answer with:
+
+```text
+ORCA canvas ask "<label>" "<your full reply>" --json
+```
+
+It returns at once with `delivered: "reply"`: the text went straight to the waiting peer as its
+answer. Do not also repeat it on screen.
 
 Ask several peers at once with a JSON map; the replies come back per peer and the call costs the
 slowest one, not the sum:
@@ -105,7 +122,7 @@ want to say something specific instead, use `ORCA canvas notify "<message>"`.
 ## Grow the team
 
 ```text
-ORCA canvas recruit <name> [--agent <preset>] [--prompt "<text>"] [--command "<cmd>"] [--floor <name>] --json
+ORCA canvas recruit <name> [--agent <preset>] [--role <role>] [--prompt "<text>"] [--command "<cmd>"] [--floor <name>] [--project <name>] --json
 ```
 
 Spawns a new agent terminal in your workspace, names it, and wires it to you, so it is immediately
@@ -119,6 +136,63 @@ askable. Use it when the work genuinely needs a teammate that does not exist yet
   from you; without it the recruit lands on your own floor.
 - `--prompt` hands the new agent its first instruction, which is usually cheaper than recruiting
   blank and asking afterwards.
+- `--agent` takes an id from `ORCA canvas preset list`. **Omitted, the recruit is a copy of you**
+  (the same agent you run). Pass `--agent codex`, `--agent claude`, … to mix vendors on one team.
+- `--role` starts it with a role preset as its standing orders (below). Prefer it over restating
+  the job in every `ask`.
+- `--project <name>` recruits into **another project** (its name in Orca's sidebar): the agent runs
+  in that project's checkout and its card lands on that project's canvas, linked to you. Address it
+  exactly as the reply prints it, `Name @ Project`; a bare name only ever means this canvas.
+
+### Swap or stop a teammate
+
+```text
+ORCA canvas recruit [<new name>] --agent <preset> --replace <teammate> --json
+ORCA canvas dismiss <teammate> --json
+```
+
+`--replace` restarts a teammate's card with another agent **in place**: its wires, notes, links and
+position survive; only the process (and its chat history) is new. When the user asks to swap, say,
+Claude for Codex, always use it instead of dismiss + recruit. Brief the new agent with `ask`.
+
+`dismiss` stops a teammate and deletes its card. A note wired only to it becomes unreachable from
+the CLI, and only the user can rewire it, so prefer `--replace` unless the teammate is truly done.
+
+### Roles
+
+```text
+ORCA canvas role list --json
+ORCA canvas role show <name> --json
+ORCA canvas role create <name> "<prompt>" [--scope current|global] --json
+ORCA canvas role edit <name> "<old>" "<new>" [--scope current|global] --json
+ORCA canvas role write <name> "<new prompt>" --json
+ORCA canvas role assign <teammate> <role> | --none --json
+```
+
+Roles are scoped to this project unless you pass `--scope global`; pick global only for roles that
+name nothing project-specific. Write prompts that leave no doubt about the role's scope, and tell
+the role to run `ORCA canvas peers` before asking anyone, naming any peer or note it must use.
+`role assign` restarts the teammate into the role (history is lost; the card and wires stay).
+
+## Wire teammates together
+
+```text
+ORCA canvas connect <from> <to> --json
+```
+
+Lets two of your teammates ask each other without you in the middle. Each side must be you or a
+session already wired to you; peers on different floors get a bridge. A new wire is not enough
+on its own: tell each peer (in its prompt) who to ask and when.
+
+## Answer a peer's menu
+
+```text
+ORCA canvas ask <label> --raw "2\n" --json
+```
+
+Types keys into a peer without waiting — for an agent stopped on an approval or choice menu.
+Escapes: `\n` Enter, `\t` Tab, `\e` Esc, `\xNN` a byte (`\x03` Ctrl-C). Run `check` first so you
+answer the menu that is actually on screen.
 
 ## Floors, and who may change the board
 
@@ -148,9 +222,15 @@ after they stopped watching. One line: what finished, and what to look at.
 ORCA canvas note read <name> --json
 ORCA canvas note write <name> "<text>" --json
 ORCA canvas note write <name> "<text>" --append --json
+ORCA canvas note edit <name> "<old text>" "<new text>" --json
+ORCA canvas note create ["<text>"] [--name <name>] --json
 ```
 
-`write` replaces the body; `--append` adds a line. Use `\n` inside the argument for line breaks.
+`write` replaces the body; `--append` adds a line; `edit` replaces one exact piece of text, which
+must appear once (`canvas_note_edit_no_match` otherwise — read the note and add context). When a
+note already has content, prefer `edit` over `write`. `create` puts a new note beside your card,
+wired to you; `--name` pins a name that never changes with the content, and the reply prints the
+exact name to use from then on. Use `\n` inside the argument for line breaks.
 Read-only notes refuse writes (`canvas_note_read_only`); report that instead of working around
 it.
 
@@ -175,3 +255,8 @@ for logs and status lines so concurrent writers do not erase each other.
 | `canvas_recruit_failed` | The terminal could not be spawned or did not come up. | Report it; do not retry in a loop. |
 | `canvas_not_lead` | Adding a floor needs a lead session. | Ask the user to mark you lead; do not work around it. |
 | `canvas_floor_exists` | A floor already has that name. | Use the existing floor, or pick another name. |
+| `canvas_note_edit_no_match` | The old text is missing from the note, or appears more than once. | Read the note; include more context. |
+| `canvas_role_not_found` | No role has that name here. | Run `role list` and use an exact name. |
+| `canvas_role_exists` | A role already has that name in that scope. | Edit it, or pick another name. |
+| `canvas_role_edit_no_match` | The old text is not in the role prompt. | Run `role show` first. |
+| `canvas_project_not_found` | No project has that name, or it is your own. | Use the name from Orca's sidebar; omit `--project` for your own. |

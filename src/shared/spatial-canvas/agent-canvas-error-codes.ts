@@ -8,11 +8,17 @@ export const AGENT_CANVAS_ERROR_CODES = [
   'canvas_note_not_found',
   'canvas_note_not_connected',
   'canvas_note_read_only',
+  'canvas_note_edit_no_match',
   'canvas_label_taken',
   'canvas_floor_not_found',
   'canvas_recruit_failed',
   'canvas_not_lead',
-  'canvas_floor_exists'
+  'canvas_floor_exists',
+  'canvas_role_not_found',
+  'canvas_role_exists',
+  'canvas_role_edit_no_match',
+  'canvas_role_invalid',
+  'canvas_project_not_found'
 ] as const
 
 export type AgentCanvasErrorCode = (typeof AGENT_CANVAS_ERROR_CODES)[number]

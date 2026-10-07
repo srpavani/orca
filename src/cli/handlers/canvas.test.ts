@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { HandlerContext } from '../dispatch'
 import { CANVAS_HANDLERS, callerParams, formatAsk, formatBatch, formatPeers } from './canvas'
+import { decodeRawInput } from './canvas-team'
 
 const originalHandle = process.env.ORCA_TERMINAL_HANDLE
 const originalTab = process.env.ORCA_TAB_ID
@@ -123,5 +124,23 @@ describe('formatting', () => {
         blockedReason: 'agent-approval-prompt'
       })
     ).toContain('not settled: agent-approval-prompt')
+  })
+
+  it('confirms an ask that answered the peer instead of prompting it', () => {
+    expect(
+      formatAsk({
+        peer: { sessionId: 'b', label: 'Beta', handle: '' },
+        reply: '',
+        settled: true,
+        delivered: 'reply'
+      })
+    ).toBe('Delivered to Beta as the reply to their ask.')
+  })
+})
+
+describe('decodeRawInput', () => {
+  it('turns typed escapes into the keys a TUI expects', () => {
+    expect(decodeRawInput(String.raw`2\n`)).toBe('2\r')
+    expect(decodeRawInput(String.raw`\e[A\t\x03\\`)).toBe('\x1b[A\t\x03\\')
   })
 })

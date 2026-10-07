@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   addNode,
   connectNodes,
@@ -21,7 +21,7 @@ function snapshotWith(wired: boolean) {
   return { ...emptyAgentCanvasSnapshot(), document }
 }
 
-function fakeRuntime(options: { betaConnected?: boolean } = {}) {
+function fakeRuntime(options: { betaConnected?: boolean; neverIdle?: boolean } = {}) {
   const calls: string[] = []
   const prompts: string[] = []
   const runtime: AgentCanvasAskRuntime = {
@@ -57,8 +57,12 @@ function fakeRuntime(options: { betaConnected?: boolean } = {}) {
       prompts.push(prompt)
       return { handle, accepted: true, bytesWritten: prompt.length }
     },
-    async waitForTerminal(handle) {
+    async waitForTerminal(handle, opts) {
       calls.push(`wait:${handle}`)
+      if (options.neverIdle) {
+        // Stays busy until the ask releases the wait.
+        await new Promise((resolve) => opts.signal?.addEventListener('abort', resolve))
+      }
       return { handle, condition: 'tui-idle', satisfied: true, status: 'running', exitCode: null }
     }
   }
@@ -80,7 +84,8 @@ describe('askConnectedPeer', () => {
     expect(result).toEqual({
       peer: { sessionId: 'tab-b', label: 'Beta', handle: 'term_b' },
       reply: 'the answer is 7',
-      settled: true
+      settled: true,
+      source: 'screen'
     })
   })
 
@@ -109,5 +114,47 @@ describe('askConnectedPeer', () => {
     })
     await expect(attempt).rejects.toBeInstanceOf(AgentCanvasAccessError)
     await expect(attempt).rejects.toMatchObject({ code: 'canvas_peer_not_running' })
+  })
+})
+
+describe('ask back', () => {
+  it("answers the peer's open ask in full instead of scraping its screen", async () => {
+    const { runtime, calls } = fakeRuntime({ neverIdle: true })
+    const snapshot = snapshotWith(true)
+    const pending = askConnectedPeer({
+      snapshot,
+      runtime,
+      callerSessionId: 'tab-a',
+      target: 'Beta',
+      prompt: 'review the diff'
+    })
+    await vi.waitFor(() => expect(calls).toContain('wait:term_b'))
+    const back = await askConnectedPeer({
+      snapshot,
+      runtime,
+      callerSessionId: 'tab-b',
+      target: 'Alpha',
+      prompt: 'line 1\nline 2 of a long review'
+    })
+    expect(back).toMatchObject({ delivered: 'reply', peer: { label: 'Alpha' } })
+    await expect(pending).resolves.toMatchObject({
+      reply: 'line 1\nline 2 of a long review',
+      settled: true,
+      source: 'ask-back'
+    })
+    // Nothing was typed into the waiting caller's terminal.
+    expect(calls.filter((call) => call === 'send:term_a')).toEqual([])
+  })
+
+  it('prompts normally when no ask is waiting', async () => {
+    const { runtime, calls } = fakeRuntime()
+    await askConnectedPeer({
+      snapshot: snapshotWith(true),
+      runtime,
+      callerSessionId: 'tab-b',
+      target: 'Alpha',
+      prompt: 'hi'
+    })
+    expect(calls).toContain('send:term_a')
   })
 })
