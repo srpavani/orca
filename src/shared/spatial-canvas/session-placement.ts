@@ -98,17 +98,18 @@ export function syncSessionNodes(
   sessions: readonly CanvasLiveSession[],
   id: CanvasIdFactory = newCanvasId
 ): CanvasDocument {
+  const repaired = repairSurfaceSessionIds(document)
   const labels = new Map(sessions.map((session) => [session.sessionId, session.label]))
-  const root = relabel(document.root, labels)
-  const levels = document.levels.map((level) => {
+  const root = relabel(repaired.root, labels)
+  const levels = repaired.levels.map((level) => {
     const contents = relabel(level, labels)
     return contents === level ? level : { ...level, ...contents }
   })
   // Why: keep the reference when nothing changed so the store skips re-render and persistence.
   const relabelled: CanvasDocument =
-    root === document.root && levels.every((level, index) => level === document.levels[index])
-      ? document
-      : { ...document, root, levels }
+    root === repaired.root && levels.every((level, index) => level === repaired.levels[index])
+      ? repaired
+      : { ...repaired, root, levels }
   const placed = new Set<string>()
   for (const node of everyNode(relabelled)) {
     if (node.content.kind === 'session') {
@@ -131,4 +132,86 @@ export function syncSessionNodes(
     placed.add(session.sessionId)
   }
   return next
+}
+
+/**
+ * The session id a card is keyed by: the Orca tab id. Terminal creation answers
+ * with the host surface id `tab::leaf`; the leaf is cut so the card matches the
+ * tab the rest of Orca (and the CLI caller) knows.
+ */
+export function canvasSessionIdOf(surfaceId: string): string {
+  const cut = surfaceId.indexOf('::')
+  return cut === -1 ? surfaceId : surfaceId.slice(0, cut)
+}
+
+/**
+ * Repairs cards saved with a surface id (`tab::leaf`) instead of the tab id. A
+ * repaired card that now duplicates one already keyed by the bare tab id is
+ * merged into it: the survivor is whichever of the two carries wires (else the
+ * one already correct), and the other's wires move over to it, so no
+ * permission is lost.
+ */
+export function repairSurfaceSessionIds(document: CanvasDocument): CanvasDocument {
+  const all = everyNode(document)
+  if (
+    !all.some((node) => node.content.kind === 'session' && node.content.sessionId.includes('::'))
+  ) {
+    return document
+  }
+  const edges = [...document.root.edges, ...document.levels.flatMap((level) => level.edges)]
+  const wired = (nodeId: string): boolean =>
+    edges.some((edge) => edge.fromNodeId === nodeId || edge.toNodeId === nodeId)
+  const keeperBySession = new Map<string, string>()
+  const replaced = new Map<string, string>()
+  for (const node of all) {
+    if (node.content.kind !== 'session') {
+      continue
+    }
+    const sessionId = canvasSessionIdOf(node.content.sessionId)
+    const keeper = keeperBySession.get(sessionId)
+    if (keeper === undefined) {
+      keeperBySession.set(sessionId, node.id)
+      continue
+    }
+    const [survivor, dropped] =
+      wired(node.id) && !wired(keeper) ? [node.id, keeper] : [keeper, node.id]
+    keeperBySession.set(sessionId, survivor)
+    replaced.set(dropped, survivor)
+  }
+  const fix = (contents: CanvasLevelContents): CanvasLevelContents => {
+    const remap = (id: string): string => replaced.get(id) ?? id
+    const seen = new Set<string>()
+    return {
+      ...contents,
+      nodes: contents.nodes
+        .filter((node) => !replaced.has(node.id))
+        .map((node) =>
+          node.content.kind === 'session' && node.content.sessionId.includes('::')
+            ? {
+                ...node,
+                content: { ...node.content, sessionId: canvasSessionIdOf(node.content.sessionId) }
+              }
+            : node
+        ),
+      edges: contents.edges
+        .map((edge) => ({
+          ...edge,
+          fromNodeId: remap(edge.fromNodeId),
+          toNodeId: remap(edge.toNodeId)
+        }))
+        .filter((edge) => {
+          const key = [edge.fromNodeId, edge.toNodeId].sort().join('|')
+          if (edge.fromNodeId === edge.toNodeId || seen.has(key)) {
+            return false
+          }
+          seen.add(key)
+          return true
+        })
+    }
+  }
+  return {
+    ...document,
+    root: fix(document.root),
+    levels: document.levels.map((level) => ({ ...level, ...fix(level) }))
+  }
 }

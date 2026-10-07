@@ -56,7 +56,11 @@ import { useFloorOverviewKeys } from './use-floor-overview-keys'
 import { useAgentCanvasKeys } from './use-agent-canvas-keys'
 import { AgentCanvasSelectionBar } from './AgentCanvasSelectionBar'
 import { AgentCanvasZoomControl } from './AgentCanvasZoomControl'
-import { useCanvasConnectMode, useCanvasConnectingFrom } from './agent-canvas-connect-mode'
+import {
+  isCanvasChromeTarget,
+  useCanvasConnectMode,
+  useCanvasConnectingFrom
+} from './agent-canvas-connect-mode'
 import { useStageHeight } from './use-stage-height'
 
 /**
@@ -232,6 +236,12 @@ export default function AgentCanvasPage(): React.JSX.Element {
           // Why: a press inside a portalled dialog or menu bubbles here through React,
           // though it never touched the board.
           if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) {
+            return
+          }
+          // Why: the toolbars float over the board inside it, so a press on Connect
+          // also bubbled here, started an empty marquee and cleared the selection —
+          // taking the card's toolbar and the pending wire with it.
+          if (isCanvasChromeTarget(event.target)) {
             return
           }
           // Why a click closes the stack: a tilted sheet must not pan or draw, and

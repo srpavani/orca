@@ -34,7 +34,7 @@ export function AgentCanvasTopChrome(props: {
   }, [props.contextKey, props.contextual])
 
   return (
-    <div className="contents" data-canvas-toolbar-gradient="">
+    <div className="contents" data-canvas-toolbar-gradient="" data-canvas-chrome="">
       <div
         className="pointer-events-none absolute inset-x-0 z-30 flex justify-center px-3"
         style={{ top: MAIN_TOOLBAR_TOP }}

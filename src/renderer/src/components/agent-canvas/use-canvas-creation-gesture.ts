@@ -1,3 +1,4 @@
+import { isCanvasChromeTarget } from './agent-canvas-connect-mode'
 import React from 'react'
 import { screenToWorld } from '../../../../shared/spatial-canvas/geometry'
 import {
@@ -91,7 +92,12 @@ export function useCanvasCreationGesture(
       }
       const target = event.target instanceof Element ? event.target : null
       // The reference's isInsideNode: pressing a card still works on that card.
-      if (!target || !surface.contains(target) || target.closest('[data-canvas-node-id]')) {
+      if (
+        !target ||
+        !surface.contains(target) ||
+        target.closest('[data-canvas-node-id]') ||
+        isCanvasChromeTarget(target)
+      ) {
         return
       }
       event.preventDefault()

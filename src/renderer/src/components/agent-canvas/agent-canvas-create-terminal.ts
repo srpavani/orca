@@ -7,6 +7,7 @@ import { placeCanvasSessionAt } from './agent-canvas-place-session'
 import { takePendingPlacement } from './agent-canvas-mode'
 import { openCanvasPrompt } from './agent-canvas-prompt'
 import { floorWorktreeIdFrom } from './agent-canvas-repo'
+import { canvasSessionIdOf } from '../../../../shared/spatial-canvas/session-placement'
 
 export type CanvasTerminalPreset = {
   /** Omitted runs the user's default shell. */
@@ -88,10 +89,15 @@ export async function createCanvasTerminal(
       // Spawning a PTY is slower than a read; leave room for it to come up.
       { timeoutMs: 60_000 }
     )
-    const sessionId = created?.tab?.id
-    if (typeof sessionId !== 'string') {
+    const surfaceId = created?.tab?.id
+    if (typeof surfaceId !== 'string') {
       return null
     }
+    // Why the leaf is cut: the RPC answers with the host surface id `tab::leaf`,
+    // while Orca's tabs, the live panes and the CLI's caller all name the session
+    // by the tab id alone. A card keyed by `tab::leaf` matched no session: it never
+    // showed its terminal, and its wires never reached `orca canvas peers`.
+    const sessionId = canvasSessionIdOf(surfaceId)
     // Why place it here rather than let the sync file it: the sync puts a session on
     // its branch's floor, so a terminal created while looking at another floor would
     // land out of sight. The board asked for it; the board should show it.

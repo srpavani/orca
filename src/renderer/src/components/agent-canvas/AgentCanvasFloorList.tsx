@@ -50,6 +50,7 @@ export function AgentCanvasFloorList(props: {
 
   return (
     <div
+      data-canvas-chrome=""
       className="pointer-events-none absolute bottom-4 right-4 z-30 flex flex-col items-end gap-2"
       // Why: this chrome sits inside the board surface, whose pointerdown closes the
       // floor stack. Without this a press on New floor (or any row) closed and

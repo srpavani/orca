@@ -56,6 +56,15 @@ export function finishCanvasConnect(toNodeId: CanvasNodeId): boolean {
   return connectCanvasNodes(from, toNodeId)
 }
 
+/** Floating chrome over the board: toolbars, corner buttons, the floor list, the selection bar. */
+const CHROME_SELECTOR =
+  '[data-canvas-chrome], [data-canvas-node-toolbar], [data-canvas-selection-bar], [data-radix-popper-content-wrapper]'
+
+/** True when a press landed on the board's chrome rather than on the board itself. */
+export function isCanvasChromeTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(CHROME_SELECTOR) !== null
+}
+
 /** The wires touching a card on the floor in view. */
 export function canvasEdgesOf(nodeId: CanvasNodeId): CanvasEdge[] {
   const { document, activeLevelId } = getAgentCanvasState()
@@ -86,7 +95,7 @@ export function useCanvasConnectMode(surfaceRef: React.RefObject<HTMLDivElement 
       }
       const target = event.target instanceof Element ? event.target : null
       // The toolbar itself (where Connect was pressed) must not cancel the mode.
-      if (target?.closest('[data-canvas-node-toolbar]')) {
+      if (isCanvasChromeTarget(target)) {
         return
       }
       event.preventDefault()

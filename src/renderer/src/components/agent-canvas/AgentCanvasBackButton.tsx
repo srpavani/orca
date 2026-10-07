@@ -11,6 +11,7 @@ import { AgentCanvasGlassButton } from './AgentCanvasGlass'
 export function AgentCanvasBackButton(props: { onBack: () => void }): React.JSX.Element {
   return (
     <div
+      data-canvas-chrome=""
       className="pointer-events-none absolute z-30 flex items-center gap-2"
       style={{ left: 12, top: 12 }}
     >
