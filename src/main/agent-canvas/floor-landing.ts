@@ -209,8 +209,14 @@ export async function landingPreflight(git: GitRun, worktreePath: string) {
 }
 
 /** What landing on `target` would bring: changed files, commits, conflicts. */
-export async function landingPreview(git: GitRun, worktreePath: string, target: string) {
-  const empty = { files: [] as string[], commitCount: 0, conflicts: [] as string[] }
+export type LandingPreview = { files: string[]; commitCount: number; conflicts: string[] }
+
+export async function landingPreview(
+  git: GitRun,
+  worktreePath: string,
+  target: string
+): Promise<LandingPreview> {
+  const empty: LandingPreview = { files: [], commitCount: 0, conflicts: [] }
   const resolved = await resolveLanding(git, worktreePath)
   if (!resolved.ok || !(await refExists(git, resolved.context.root, target))) {
     return empty

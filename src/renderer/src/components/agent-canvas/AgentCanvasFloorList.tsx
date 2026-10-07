@@ -192,8 +192,10 @@ export function AgentCanvasFloorList(props: {
                       }
                       onClick={(event) => {
                         event.stopPropagation()
-                        const levelId = level.id as string
-                        void setCanvasLevelLoaded(levelId, unloaded)
+                        const levelId = level.id
+                        if (levelId !== null) {
+                          void setCanvasLevelLoaded(levelId, unloaded)
+                        }
                       }}
                     >
                       {unloaded ? <Cloud className="size-3" /> : <CloudOff className="size-3" />}
@@ -209,7 +211,10 @@ export function AgentCanvasFloorList(props: {
                       )}
                       onClick={(event) => {
                         event.stopPropagation()
-                        const levelId = level.id as string
+                        const levelId = level.id
+                        if (levelId === null) {
+                          return
+                        }
                         openCanvasPrompt({
                           kind: 'confirm',
                           title: translate(

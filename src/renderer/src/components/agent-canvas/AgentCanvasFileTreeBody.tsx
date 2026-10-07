@@ -115,7 +115,10 @@ export function AgentCanvasFileTreeBody(props: {
           role="tree"
           onContextMenu={(event) => {
             event.stopPropagation()
-            const item = (event.target as HTMLElement).closest<HTMLElement>('[data-tree-path]')
+            const item =
+              event.target instanceof Element
+                ? event.target.closest<HTMLElement>('[data-tree-path]')
+                : null
             const path = item?.dataset.treePath
             setMenuRow(rows.find((row) => row.path === path) ?? null)
           }}

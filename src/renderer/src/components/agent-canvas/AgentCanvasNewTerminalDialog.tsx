@@ -14,7 +14,6 @@ import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
-import type { TuiAgent } from '../../../../shared/tui-agent'
 import {
   CANVAS_TERMINAL_PRESETS,
   createCanvasTerminal,
@@ -85,7 +84,7 @@ function NewTerminalBody(props: { request: NewTerminalRequest }): React.JSX.Elem
     setCreating(true)
     const created = await createCanvasTerminal({
       name,
-      ...(preset.agent ? { agent: preset.agent as TuiAgent } : {}),
+      ...(preset.agent ? { agent: preset.agent } : {}),
       ...(!preset.agent && command.trim() ? { command: command.trim() } : {}),
       ...(cwd.trim() ? { cwd: cwd.trim() } : {}),
       ...(prompt.trim() ? { prompt: prompt.trim() } : {})

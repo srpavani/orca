@@ -14,6 +14,7 @@ import { translate } from '@/i18n/i18n'
 import { worldRectToScreen } from '../../../../shared/spatial-canvas/geometry'
 import {
   GROUP_COLORS,
+  GROUP_COLOR_TOKENS,
   groupColorHex,
   groupFrame,
   type GroupColor
@@ -146,7 +147,7 @@ function GroupFrame(props: {
                 <span className="size-3 rounded-full border border-dashed border-muted-foreground" />
                 {translate('auto.components.agentCanvas.groupColorNeutral', 'Neutral')}
               </ContextMenuItem>
-              {(Object.keys(GROUP_COLORS) as Exclude<GroupColor, ''>[]).map((color) => (
+              {GROUP_COLOR_TOKENS.map((color) => (
                 <ContextMenuItem
                   key={color}
                   onSelect={() => recolorGroup(levelId, group.id, color)}

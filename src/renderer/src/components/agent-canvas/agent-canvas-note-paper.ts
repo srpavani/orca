@@ -61,7 +61,5 @@ export const NOTE_COLOR_KEYS: Record<CanvasNoteColor, string> = {
 }
 
 export function parseNoteColor(value: unknown): CanvasNoteColor | undefined {
-  return typeof value === 'string' && value in NOTE_PAPER_CLASS
-    ? (value as CanvasNoteColor)
-    : undefined
+  return NOTE_COLOR_ORDER.find((color) => color === value)
 }

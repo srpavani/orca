@@ -1,12 +1,16 @@
 import { everyNode, findNode, levelsOf, sessionNode } from '../../shared/spatial-canvas/levels'
-import { reachableFrom, type CanvasReach } from '../../shared/spatial-canvas/reachability'
+import {
+  reachableFrom,
+  type CanvasNotePeer,
+  type CanvasReach,
+  type CanvasSessionPeer
+} from '../../shared/spatial-canvas/reachability'
 import {
   sonarBoard,
   type SonarActivityState,
   type SonarSample
 } from '../../shared/spatial-canvas/sonar'
 import type { AgentCanvasSnapshot } from '../../shared/spatial-canvas/agent-canvas-snapshot'
-import type { CanvasNotePeer, CanvasSessionPeer } from '../../shared/spatial-canvas/reachability'
 import type { AgentCanvasErrorCode } from '../../shared/spatial-canvas/agent-canvas-error-codes'
 
 export class AgentCanvasAccessError extends Error {

@@ -5,11 +5,11 @@ vi.mock('@/runtime/runtime-rpc-client', () => ({ callRuntimeRpc: vi.fn() }))
 
 import { canvasRepoIdFrom, floorWorktreeIdFrom } from './agent-canvas-repo'
 
-const base = {
+const base: Parameters<typeof canvasRepoIdFrom>[0] = {
   activeRepoId: null,
   activeWorktreeId: null,
-  repos: [] as { id: string; kind?: string }[],
-  worktreesByRepo: {} as Record<string, { id: string }[]>
+  repos: [],
+  worktreesByRepo: {}
 }
 
 describe('canvasRepoIdFrom', () => {

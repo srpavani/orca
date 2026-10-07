@@ -17,7 +17,10 @@ function titleOf(node: CanvasNode): string {
       return node.content.url.replace(/^https?:\/\//, '')
     case 'fileTree':
       return node.content.rootName
-    default:
+    case 'text':
+    case 'stack':
+    case 'drawing':
+    case 'bridge':
       return translate('auto.components.agentCanvas.cardTitle', 'Card')
   }
 }

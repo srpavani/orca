@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
 import {
   MAX_LIVE_CANVAS_PANES,
@@ -25,7 +26,7 @@ describe('canvasPaneKey', () => {
 })
 
 describe('buildCanvasPortals', () => {
-  const target = {} as HTMLElement
+  const target = document.createElement('div')
   const request = (index: number, focused = false): CanvasLivePaneRequest => ({
     nodeId: `node-${index}`,
     sessionId: `tab-${index}`,

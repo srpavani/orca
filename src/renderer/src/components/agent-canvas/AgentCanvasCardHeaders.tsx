@@ -192,7 +192,6 @@ export function PortalControlsBar(props: {
         >
           <Search className="size-3 shrink-0 text-muted-foreground" aria-hidden />
           <input
-            // oxlint-disable-next-line jsx-a11y/no-autofocus -- the reference focuses the address on edit
             autoFocus
             type="text"
             value={draft}

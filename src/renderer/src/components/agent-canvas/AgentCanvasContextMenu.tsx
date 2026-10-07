@@ -41,7 +41,8 @@ export function AgentCanvasContextMenu(props: {
         <div
           className="absolute inset-0"
           onContextMenu={(event) => {
-            const element = (event.target as HTMLElement).closest('[data-canvas-node-id]')
+            const element =
+              event.target instanceof Element ? event.target.closest('[data-canvas-node-id]') : null
             const bounds = event.currentTarget.getBoundingClientRect()
             const nodeId = element?.getAttribute('data-canvas-node-id') ?? null
             if (nodeId !== null) {

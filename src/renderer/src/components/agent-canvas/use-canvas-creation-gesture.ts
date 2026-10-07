@@ -49,12 +49,18 @@ function createInFrame(
   }
 }
 
+/** Every creation mode has a default size; this narrows the mode for the lookup. */
+function hasCreationSize(mode: CanvasMode): mode is keyof typeof CREATION_DEFAULT_SIZE {
+  return Object.hasOwn(CREATION_DEFAULT_SIZE, mode)
+}
+
 /**
  * The reference's useCreationGesture: with a creation tool armed, a press on
  * empty board starts a dashed preview; release places the card (a click centres
  * the default size, a drag spans the box, both on the 20px grid) and drops the
  * tool back to Selection. Escape cancels a gesture, or disarms an idle tool.
  */
+
 export function useCanvasCreationGesture(
   surfaceRef: React.RefObject<HTMLDivElement | null>,
   onPortal: (frame: CanvasRect) => void
@@ -121,17 +127,13 @@ export function useCanvasCreationGesture(
       const to = world(event)
       const mode = getCanvasMode()
       cancel()
-      if (!isCreationMode(mode)) {
+      if (!isCreationMode(mode) || !hasCreationSize(mode)) {
         return
       }
       const frame =
         mode === 'text'
           ? textFrameFromDrag(from, to)
-          : frameFromDrag(
-              from,
-              to,
-              CREATION_DEFAULT_SIZE[mode as keyof typeof CREATION_DEFAULT_SIZE]
-            )
+          : frameFromDrag(from, to, CREATION_DEFAULT_SIZE[mode])
       setCanvasMode('select')
       createInFrame(mode, frame, portalRef.current)
     }

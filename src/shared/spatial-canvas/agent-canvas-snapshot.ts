@@ -41,7 +41,7 @@ export function parseCanvasDocument(value: unknown): CanvasDocument | null {
   if (!Array.isArray(value.bridges) || !value.levels.every(isLevelContents)) {
     return null
   }
-  // Why: shape is checked structurally; node payloads only come from Orca's own writers.
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: version, root, levels and bridges are checked above; node payloads only come from Orca's own writers.
   return value as CanvasDocument
 }
 

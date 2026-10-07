@@ -57,15 +57,14 @@ export function parseCanvasAppearance(value: unknown): CanvasAppearance {
   if (typeof value !== 'object' || value === null) {
     return base
   }
-  const record = value as Record<string, unknown>
-  const pick = <T extends string>(candidate: unknown, allowed: readonly T[], fallback: T): T =>
-    typeof candidate === 'string' && (allowed as readonly string[]).includes(candidate)
-      ? (candidate as T)
-      : fallback
+  const pick = <T extends string>(key: string, allowed: readonly T[], fallback: T): T => {
+    const candidate: unknown = key in value ? Reflect.get(value, key) : undefined
+    return allowed.find((entry) => entry === candidate) ?? fallback
+  }
   return {
-    background: pick(record.background, CANVAS_BACKGROUND_STYLES, base.background),
-    connectionStyle: pick(record.connectionStyle, CANVAS_CONNECTION_STYLES, base.connectionStyle),
-    selectionStyle: pick(record.selectionStyle, CANVAS_SELECTION_STYLES, base.selectionStyle)
+    background: pick('background', CANVAS_BACKGROUND_STYLES, base.background),
+    connectionStyle: pick('connectionStyle', CANVAS_CONNECTION_STYLES, base.connectionStyle),
+    selectionStyle: pick('selectionStyle', CANVAS_SELECTION_STYLES, base.selectionStyle)
   }
 }
 
@@ -196,7 +195,7 @@ export function selectionPaint(style: CanvasSelectionStyle): CanvasSelectionPain
       return { boxShadow: 'default', border: 'none', marks: 'brackets' }
     case 'cornerDots':
       return { boxShadow: 'default', border: 'none', marks: 'dots' }
-    default:
+    case 'elevation':
       // Why elevation is the default: on a board of paper, the selected card being
       // the one that looks lifted is the reference's own way of saying it.
       return { boxShadow: 'elevated', border: 'none', marks: 'none' }

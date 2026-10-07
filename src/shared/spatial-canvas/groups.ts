@@ -30,6 +30,16 @@ export const GROUP_COLORS = {
 } as const
 export type GroupColor = keyof typeof GROUP_COLORS | ''
 
+/** The swatch tokens in palette order, typed so callers need no `Object.keys` cast. */
+export const GROUP_COLOR_TOKENS: readonly Exclude<GroupColor, ''>[] = [
+  'yellow',
+  'pink',
+  'blue',
+  'green',
+  'orange',
+  'purple'
+]
+
 /**
  * Drops groups left with fewer than two members on this floor, and member ids
  * that no longer name a card here. A group of one is not a group.
@@ -188,5 +198,6 @@ export function groupFrame(contents: CanvasLevelContents, group: CanvasGroup): C
 
 /** The swatch hex for a token, or null for neutral and anything unknown. */
 export function groupColorHex(token: string): string | null {
-  return token in GROUP_COLORS ? GROUP_COLORS[token as keyof typeof GROUP_COLORS] : null
+  const color = GROUP_COLOR_TOKENS.find((entry) => entry === token)
+  return color === undefined ? null : GROUP_COLORS[color]
 }

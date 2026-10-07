@@ -14,6 +14,7 @@ import { newCanvasId } from '../../../../shared/spatial-canvas/document'
 import {
   documentHooks,
   FLOOR_HOOK_ENVIRONMENT_VARIABLES,
+  FLOOR_HOOK_SECTIONS,
   formatHookCommands,
   parseHookCommands,
   type FloorHookSection,
@@ -135,7 +136,7 @@ function FloorHooksBody(): React.JSX.Element {
           />
         </div>
 
-        {(Object.keys(SECTION_LABELS) as FloorHookSection[]).map((section) => (
+        {FLOOR_HOOK_SECTIONS.map((section) => (
           <div key={section} className="flex flex-col gap-1.5">
             <span className="text-xs font-medium">{SECTION_LABELS[section]()}</span>
             <Textarea

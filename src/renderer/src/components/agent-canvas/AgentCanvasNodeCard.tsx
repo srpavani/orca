@@ -163,7 +163,10 @@ function CardHeader(props: {
       return <NoteCardHeader node={{ ...node, content }} drag={drag} trailing={props.trailing} />
     case 'fileTree':
       return <FileTreeCardHeader node={{ ...node, content }} drag={drag} />
-    default:
+    case 'text':
+    case 'stack':
+    case 'drawing':
+    case 'bridge':
       return null
   }
 }

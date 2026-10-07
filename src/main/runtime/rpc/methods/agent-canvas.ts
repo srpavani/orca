@@ -26,8 +26,7 @@ import {
   resolveConnectedNote,
   viewPeers,
   viewStatus,
-  writeConnectedNote,
-  type AgentCanvasTerminalSample
+  writeConnectedNote
 } from '../../../agent-canvas/agent-canvas-peers'
 import { createLevel } from '../../../../shared/spatial-canvas/level-edits'
 import { sessionNode } from '../../../../shared/spatial-canvas/levels'
@@ -126,10 +125,7 @@ export const AGENT_CANVAS_METHODS = [
     params: AgentCanvasStatusParams,
     handler: async (params, { runtime }) => {
       const { caller, snapshot } = await callerOf(runtime, params)
-      const lister = runtime as unknown as {
-        listTerminals(): Promise<{ terminals: AgentCanvasTerminalSample[] }>
-      }
-      const { terminals } = await lister.listTerminals()
+      const { terminals } = await runtime.listTerminals()
       return { sessions: viewStatus(snapshot, caller, terminals, Date.now()) }
     }
   }),

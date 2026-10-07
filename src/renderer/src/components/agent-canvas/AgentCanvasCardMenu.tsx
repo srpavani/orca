@@ -130,7 +130,9 @@ function cardName(node: CanvasNode): string {
       return node.content.url
     case 'fileTree':
       return node.content.rootName
-    default:
+    case 'stack':
+    case 'drawing':
+    case 'bridge':
       return ''
   }
 }
@@ -306,7 +308,7 @@ export function AgentCanvasCardMenu(props: { node: CanvasNode }): React.JSX.Elem
               </ContextMenuSubTrigger>
               <ContextMenuSubContent>
                 {ALIGN_MENU_GROUPS.map((group, index) => (
-                  <React.Fragment key={group[0]?.alignment ?? index}>
+                  <React.Fragment key={group.map((item) => item.alignment).join('|')}>
                     {index > 0 ? <ContextMenuSeparator /> : null}
                     {group.map(({ alignment, label, Icon }) => (
                       <ContextMenuItem

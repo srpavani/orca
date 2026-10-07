@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { HandlerContext } from '../dispatch'
+import { RuntimeClient } from '../runtime-client'
 import { CANVAS_HANDLERS, callerParams, formatAsk, formatBatch, formatPeers } from './canvas'
 import { decodeRawInput } from './canvas-team'
 
@@ -22,14 +23,18 @@ afterEach(() => {
 })
 
 function context(flags: Record<string, string | boolean>, result: unknown) {
-  const call = vi.fn(async () => ({ id: '1', ok: true, result, _meta: { runtimeId: 'rt' } }))
+  // Why: explicit args keep the constructor off env vars and the real CLI path.
+  const client = new RuntimeClient('/orca-canvas-test', 1_000, null, null, 'orca')
+  const call = vi
+    .spyOn(client, 'call')
+    .mockResolvedValue({ id: '1', ok: true, result, _meta: { runtimeId: 'rt' } })
   vi.spyOn(console, 'log').mockImplementation(() => {})
-  const ctx = {
+  const ctx: HandlerContext = {
     flags: new Map(Object.entries(flags)),
-    client: { call },
+    client,
     cwd: '/',
     json: true
-  } as unknown as HandlerContext
+  }
   return { ctx, call }
 }
 

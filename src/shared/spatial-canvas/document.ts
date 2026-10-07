@@ -210,7 +210,7 @@ export function createEdge(input: {
     ropePoints: input.ropePoints ?? null,
     fromNodeId: input.fromNodeId,
     toNodeId: input.toNodeId
-  } as CanvasEdge
+  }
 }
 
 export function addEdge(

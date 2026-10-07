@@ -154,7 +154,11 @@ export function renameCanvasNode(
       case 'note':
       case 'text':
         return { ...node, content: { ...node.content, pinnedName: pinned } }
-      default:
+      case 'stack':
+      case 'portal':
+      case 'fileTree':
+      case 'drawing':
+      case 'bridge':
         return node
     }
   })

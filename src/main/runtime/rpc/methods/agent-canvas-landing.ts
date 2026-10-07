@@ -57,7 +57,8 @@ const runGit: GitRun = async (args, cwd) => {
     return { exitCode: 0, stdout, stderr }
   } catch (error) {
     const { stdout, stderr } = extractExecError(error)
-    const code = (error as { code?: unknown } | null)?.code
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined
     return { exitCode: typeof code === 'number' && code !== 0 ? code : 1, stdout, stderr }
   }
 }
@@ -90,6 +91,6 @@ export const AGENT_CANVAS_LANDING_METHODS = [
     name: 'canvas.landingResolve',
     params: AgentCanvasLandingResolveParams,
     handler: async (params, { runtime }) =>
-      deliverResolvePrompt(runtime as unknown as ResolveRuntime, params.sessionId, params.prompt)
+      deliverResolvePrompt(runtime, params.sessionId, params.prompt)
   })
 ]

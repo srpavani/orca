@@ -1,5 +1,4 @@
-import React from 'react'
-import { useSyncExternalStore } from 'react'
+import React, { useSyncExternalStore } from 'react'
 import { levelContents } from '../../../../shared/spatial-canvas/levels'
 import type { CanvasEdge, CanvasNode, CanvasNodeId } from '../../../../shared/spatial-canvas/types'
 import { connectCanvasNodes, disconnectCanvasEdge, getAgentCanvasState } from './agent-canvas-store'

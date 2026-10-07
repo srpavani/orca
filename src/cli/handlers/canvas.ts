@@ -126,7 +126,7 @@ async function askBatch(ctx: HandlerContext, raw: string): Promise<void> {
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     throw new Error('--batch expects a JSON object of {"Peer Name": "prompt"}')
   }
-  const entries = Object.entries(parsed as Record<string, unknown>)
+  const entries: [string, unknown][] = Object.entries(parsed)
   if (entries.length === 0) {
     throw new Error('--batch received no targets')
   }
@@ -151,7 +151,8 @@ async function askBatch(ctx: HandlerContext, raw: string): Promise<void> {
       }
     })
   )
-  printResult({ replies } as never, ctx.json, formatBatch)
+  // Why: replies come from many RPCs, so there is no single envelope to hand printResult.
+  console.log(ctx.json ? JSON.stringify({ replies }, null, 2) : formatBatch({ replies }))
   if (replies.some((entry) => entry.error || entry.settled === false)) {
     process.exitCode = 1
   }
