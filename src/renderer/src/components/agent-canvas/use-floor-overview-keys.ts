@@ -1,4 +1,5 @@
 import React from 'react'
+import { toggleFloorOverview } from './agent-canvas-floor-snapshots'
 import {
   createFloorScrollSwitch,
   nextFloorIndex
@@ -68,7 +69,7 @@ export function useFloorOverviewKeys(): void {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.code === 'Backslash') {
         event.preventDefault()
         event.stopPropagation()
-        setCanvasViewState({ floorOverview: !overview })
+        toggleFloorOverview()
         return
       }
       if (!overview || isTextEntry(event.target) || document.querySelector('[role=dialog]')) {

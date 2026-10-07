@@ -17,6 +17,7 @@ import {
   resolveVsCodeRemoteSshLaunchSpec
 } from '../external-editor-launch'
 import { resolveVsCodeSshAuthority } from '../ssh/vscode-ssh-authority'
+import { registerCanvasCaptureHandler } from './canvas-capture'
 
 export { EXTERNAL_EDITOR_CLI_COMMAND }
 
@@ -137,6 +138,7 @@ async function openWithSystemDefault(pathValue: string): Promise<boolean> {
 }
 
 export function registerShellHandlers(store: Store): void {
+  registerCanvasCaptureHandler()
   ipcMain.handle('shell:openPath', async (_event, path: string): Promise<void> => {
     // Why: keep the legacy fire-and-forget renderer contract while reusing the
     // same absolute/existing path validation as the explicit file-manager API.

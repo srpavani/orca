@@ -1,7 +1,7 @@
 import React from 'react'
 import { useSyncExternalStore } from 'react'
 import { levelContents } from '../../../../shared/spatial-canvas/levels'
-import type { CanvasEdge, CanvasNodeId } from '../../../../shared/spatial-canvas/types'
+import type { CanvasEdge, CanvasNode, CanvasNodeId } from '../../../../shared/spatial-canvas/types'
 import { connectCanvasNodes, disconnectCanvasEdge, getAgentCanvasState } from './agent-canvas-store'
 
 /**
@@ -83,7 +83,26 @@ export function disconnectCanvasEdges(edgeIds: readonly string[]): void {
  * empty board cancels it; Escape cancels. Capture phase, so the press is taken
  * before it selects or drags anything.
  */
-export function useCanvasConnectMode(surfaceRef: React.RefObject<HTMLDivElement | null>): void {
+export function useCanvasConnectMode(
+  surfaceRef: React.RefObject<HTMLDivElement | null>
+): { x: number; y: number } | null {
+  // The reference's connectingLineEndpoint: where the armed wire's loose end is,
+  // so the preview line follows the pointer from Connect until the wire lands.
+  const [cursor, setCursor] = React.useState<{ x: number; y: number } | null>(null)
+  const armed = useCanvasConnectingFrom() !== null
+  React.useEffect(() => {
+    const surface = surfaceRef.current
+    if (!armed || !surface) {
+      setCursor(null)
+      return
+    }
+    const onMove = (event: PointerEvent): void => {
+      const rect = surface.getBoundingClientRect()
+      setCursor({ x: event.clientX - rect.left, y: event.clientY - rect.top })
+    }
+    window.addEventListener('pointermove', onMove)
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [armed, surfaceRef])
   React.useEffect(() => {
     const surface = surfaceRef.current
     if (!surface) {
@@ -122,4 +141,15 @@ export function useCanvasConnectMode(surfaceRef: React.RefObject<HTMLDivElement 
       window.removeEventListener('keydown', onKeyDown, { capture: true })
     }
   }, [surfaceRef])
+  return armed ? cursor : null
+}
+
+/** The armed wire as the ropes draw it: its source card and the pointer, once it has moved. */
+export function connectPreview(
+  nodes: readonly CanvasNode[],
+  fromId: CanvasNodeId | null,
+  cursor: { x: number; y: number } | null
+): { fromNode: CanvasNode; cursor: { x: number; y: number } } | null {
+  const fromNode = fromId === null ? undefined : nodes.find((node) => node.id === fromId)
+  return fromNode && cursor ? { fromNode, cursor } : null
 }

@@ -44,41 +44,83 @@ export type Rope = {
 
 export type RopeObstacle = Pick<CanvasRect, 'x' | 'y' | 'width' | 'height'>
 
-/** Where a rope leaves a card: the facing side's midpoint, so it never crosses the card. */
+function edgeMidpoints(frame: CanvasRect): CanvasPoint[] {
+  const midX = frame.x + frame.width / 2
+  const midY = frame.y + frame.height / 2
+  return [
+    { x: midX, y: frame.y },
+    { x: midX, y: frame.y + frame.height },
+    { x: frame.x, y: midY },
+    { x: frame.x + frame.width, y: midY }
+  ]
+}
+
+/**
+ * Where a rope leaves each card: the reference's closestEdgePins — of the four
+ * side midpoints on each card, the pair nearest each other.
+ */
 export function ropeEndpoints(
   from: CanvasRect,
   to: CanvasRect
 ): { start: CanvasPoint; end: CanvasPoint } {
-  const a = { x: from.x + from.width / 2, y: from.y + from.height / 2 }
-  const b = { x: to.x + to.width / 2, y: to.y + to.height / 2 }
-  const dx = b.x - a.x
-  const dy = b.y - a.y
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    const direction = dx >= 0 ? 1 : -1
-    return {
-      start: { x: a.x + (direction * from.width) / 2, y: a.y },
-      end: { x: b.x - (direction * to.width) / 2, y: b.y }
+  let best = {
+    start: { x: from.x + from.width / 2, y: from.y + from.height / 2 },
+    end: { x: to.x + to.width / 2, y: to.y + to.height / 2 }
+  }
+  let bestDistance = Infinity
+  for (const start of edgeMidpoints(from)) {
+    for (const end of edgeMidpoints(to)) {
+      const span = distance(start, end)
+      if (span < bestDistance) {
+        bestDistance = span
+        best = { start, end }
+      }
     }
   }
-  const direction = dy >= 0 ? 1 : -1
-  return {
-    start: { x: a.x, y: a.y + (direction * from.height) / 2 },
-    end: { x: b.x, y: b.y - (direction * to.height) / 2 }
-  }
+  return best
 }
 
-export function createRope(start: CanvasPoint, end: CanvasPoint): Rope {
+/** The reference's ConnectionsLayer preview: the side midpoint of `frame` nearest `point`. */
+export function closestEdgeMidpoint(frame: CanvasRect, point: CanvasPoint): CanvasPoint {
+  let best = edgeMidpoints(frame)[0]
+  for (const candidate of edgeMidpoints(frame)) {
+    if (distance(candidate, point) < distance(best, point)) {
+      best = candidate
+    }
+  }
+  return best
+}
+
+/**
+ * The reference's staticRopePoints: a parabola under the straight line, 12% of
+ * the span deep (at least 20). A new wire is born in this shape and then falls
+ * and swings into its rest pose — that drop is the connect animation.
+ */
+export function staticRopePoints(start: CanvasPoint, end: CanvasPoint): CanvasPoint[] {
+  const sagAmount = Math.max(distance(start, end) * 0.12, 20)
   const points: CanvasPoint[] = []
-  const previous: CanvasPoint[] = []
   for (let index = 0; index <= ROPE_SEGMENT_COUNT; index += 1) {
     const t = index / ROPE_SEGMENT_COUNT
-    const point = { x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t }
-    points.push(point)
-    previous.push({ ...point })
+    points.push({
+      x: start.x + (end.x - start.x) * t,
+      y: start.y + (end.y - start.y) * t + sagAmount * 4 * t * (1 - t)
+    })
+  }
+  return points
+}
+
+/** A rope pinned at both ends; `sagged` starts it in the reference's parabola. */
+export function createRope(start: CanvasPoint, end: CanvasPoint, sagged = false): Rope {
+  const points: CanvasPoint[] = sagged ? staticRopePoints(start, end) : []
+  if (!sagged) {
+    for (let index = 0; index <= ROPE_SEGMENT_COUNT; index += 1) {
+      const t = index / ROPE_SEGMENT_COUNT
+      points.push({ x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t })
+    }
   }
   return {
     points,
-    previous,
+    previous: points.map((point) => ({ ...point })),
     start: { ...start },
     end: { ...end },
     restLength: (distance(start, end) / ROPE_SEGMENT_COUNT) * ROPE_SLACK_FACTOR,
@@ -86,7 +128,6 @@ export function createRope(start: CanvasPoint, end: CanvasPoint): Rope {
     awakeSeconds: 0
   }
 }
-
 function distance(left: CanvasPoint, right: CanvasPoint): number {
   return Math.hypot(right.x - left.x, right.y - left.y)
 }

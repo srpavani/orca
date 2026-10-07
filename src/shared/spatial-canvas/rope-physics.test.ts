@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   ROPE_SEGMENT_COUNT,
+  closestEdgeMidpoint,
   createRope,
+  staticRopePoints,
   repinRope,
   ropeEndpoints,
   ropeMidpoint,
@@ -31,6 +33,38 @@ describe('rope endpoints', () => {
     )
     expect(start).toEqual({ x: 50, y: 50 })
     expect(end).toEqual({ x: 50, y: 300 })
+  })
+
+  it('picks the nearest pair of side midpoints for diagonal cards', () => {
+    const { start, end } = ropeEndpoints(
+      { x: 0, y: 0, width: 100, height: 50 },
+      { x: 120, y: 200, width: 100, height: 50 }
+    )
+    expect(start).toEqual({ x: 50, y: 50 })
+    // (50,50)->(120,225) is 188 long, beating (50,50)->(170,200) at 192.
+    expect(end).toEqual({ x: 120, y: 225 })
+  })
+
+  it('aims the connect preview from the side midpoint nearest the pointer', () => {
+    expect(closestEdgeMidpoint({ x: 0, y: 0, width: 100, height: 50 }, { x: 400, y: 30 })).toEqual({
+      x: 100,
+      y: 25
+    })
+  })
+})
+
+describe('static rope points', () => {
+  it('hangs a parabola 12% of the span deep, at least 20', () => {
+    const long = staticRopePoints(A, B)
+    expect(long).toHaveLength(ROPE_SEGMENT_COUNT + 1)
+    expect(long[ROPE_SEGMENT_COUNT / 2].y).toBeCloseTo(48)
+    expect(staticRopePoints(A, { x: 50, y: 0 })[ROPE_SEGMENT_COUNT / 2].y).toBeCloseTo(20)
+  })
+
+  it('starts a new wire sagged so it swings into its rest pose', () => {
+    const rope = createRope(A, B, true)
+    expect(rope.points[ROPE_SEGMENT_COUNT / 2].y).toBeGreaterThan(40)
+    expect(rope.asleep).toBe(false)
   })
 })
 

@@ -82,6 +82,8 @@ export type FloorStackItem = {
   /** Offset from the live floor: 0 is live, negative down, positive up. */
   relativePosition: number
   color: string | null
+  /** Picture of the board as it last looked, shown on the sheet; null shows the name. */
+  snapshot?: string | null
 }
 
 /**

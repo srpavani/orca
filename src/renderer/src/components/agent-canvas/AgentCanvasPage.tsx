@@ -3,8 +3,7 @@ import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { screenToWorld, worldRectToScreen } from '../../../../shared/spatial-canvas/geometry'
-import { buildFloorStack } from '../../../../shared/spatial-canvas/floor-stack'
-import { levelContents, levelsOf } from '../../../../shared/spatial-canvas/levels'
+import { levelContents } from '../../../../shared/spatial-canvas/levels'
 import type { CanvasNode } from '../../../../shared/spatial-canvas/types'
 import { isFileTreeNode, isPortalNode } from './agent-canvas-node-kinds'
 import { addCanvasPortal } from './agent-canvas-level-actions'
@@ -30,11 +29,11 @@ import { AgentCanvasBridgeMarkers } from './AgentCanvasBridgeMarkers'
 import { AgentCanvasBridgeMenu } from './AgentCanvasBridgeMenu'
 import { AgentCanvasDrawings, isDrawingNode } from './AgentCanvasDrawings'
 import { AgentCanvasContextMenu, EMPTY_CONTEXT_TARGET } from './AgentCanvasContextMenu'
-import { AgentCanvasFloorList } from './AgentCanvasFloorList'
 import { AgentCanvasFloorHooksDialog } from './AgentCanvasFloorHooksDialog'
 import { AgentCanvasNewFloorDialog } from './AgentCanvasNewFloorDialog'
 import { AgentCanvasNewTerminalDialog } from './AgentCanvasNewTerminalDialog'
 import { AgentCanvasFloorStack } from './AgentCanvasFloorStack'
+import { useCanvasFloorStack } from './use-canvas-floor-stack'
 import { AgentCanvasChrome } from './AgentCanvasChrome'
 import { AgentCanvasCreationPreview } from './AgentCanvasCreationPreview'
 import { useCanvasCreationGesture } from './use-canvas-creation-gesture'
@@ -55,8 +54,9 @@ import { usePrefersReducedMotion } from './use-prefers-reduced-motion'
 import { useFloorOverviewKeys } from './use-floor-overview-keys'
 import { useAgentCanvasKeys } from './use-agent-canvas-keys'
 import { AgentCanvasSelectionBar } from './AgentCanvasSelectionBar'
-import { AgentCanvasZoomControl } from './AgentCanvasZoomControl'
+import { AgentCanvasBottomChrome } from './AgentCanvasBottomChrome'
 import {
+  connectPreview,
   isCanvasChromeTarget,
   useCanvasConnectMode,
   useCanvasConnectingFrom
@@ -86,6 +86,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const activeLevelId = useAgentCanvas((state) => state.activeLevelId)
   const drawTool = useAgentCanvas((state) => state.drawTool)
   const floorOverview = useAgentCanvas((state) => state.floorOverview)
+  const activeEdgeIds = useAgentCanvas((state) => state.activeEdgeIds)
   const loaded = useAgentCanvas((state) => state.loaded)
   const selectedNodeIds = useAgentCanvas((state) => state.selectedNodeIds)
   const [contextTarget, setContextTarget] = React.useState(EMPTY_CONTEXT_TARGET)
@@ -93,7 +94,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const stageHeight = useStageHeight(surfaceRef)
   const prefersReducedMotion = usePrefersReducedMotion()
   useFloorOverviewKeys()
-  useCanvasConnectMode(surfaceRef)
+  const connectCursor = useCanvasConnectMode(surfaceRef)
   const connectingFrom = useCanvasConnectingFrom()
   // Why the same source the tab bar uses: a card must not disagree with the
   // rest of Orca about whether its agent is working.
@@ -124,27 +125,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
   const selectedCard =
     selectedNodeIds.length === 1 ? cards.find((node) => node.id === selectedNodeIds[0]) : undefined
 
-  // The stack's geometry needs every floor, not just the live one: the sheets above
-  // and below are what the overview exists to show.
-  const floorStack = React.useMemo(
-    () =>
-      buildFloorStack(
-        levelsOf(document).map((level) => ({
-          id: level.id,
-          name:
-            level.id === null
-              ? translate('auto.components.agentCanvas.groundFloor', 'Ground')
-              : level.name,
-          // Floors carry no colour in this port yet, so every sheet uses the hairline ring.
-          color: null,
-          items: level.contents.nodes.length
-        })),
-        activeLevelId
-      ),
-    [document, activeLevelId]
-  )
-
-  // The live floor's name, shown at the top of the board like the reference.
+  const floorStack = useCanvasFloorStack(document, activeLevelId)
 
   const surfaceCenterWorld = (): { x: number; y: number } => {
     const surface = surfaceRef.current
@@ -154,7 +135,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
     return screenToWorld(center, getAgentCanvasState().viewport)
   }
 
-  const { zoomBy, fitView } = useCanvasViewControls({ surfaceRef, cards, loaded })
+  const { zoomTo } = useCanvasViewControls({ surfaceRef, cards, loaded })
 
   const addPortalAt = (at: { x: number; y: number }): void => {
     openCanvasPrompt({
@@ -223,6 +204,7 @@ export default function AgentCanvasPage(): React.JSX.Element {
     <div className="flex h-full min-h-0 flex-col">
       <div
         ref={surfaceRef}
+        data-canvas-viewport=""
         className={cn(
           'relative min-h-0 flex-1 touch-none overflow-hidden',
           drawTool && 'cursor-crosshair'
@@ -283,9 +265,12 @@ export default function AgentCanvasPage(): React.JSX.Element {
                 nodes={nodes}
                 edges={floor.edges}
                 viewport={viewport}
-                pending={gestures.pendingWire}
+                pending={
+                  gestures.pendingWire ?? connectPreview(nodes, connectingFrom, connectCursor)
+                }
                 avoidNodes={ropeAvoidsNodes(appearance)}
                 circuit={appearance.connectionStyle === 'circuit'}
+                activeEdgeIds={activeEdgeIds}
                 onDisconnect={(edge) => disconnectCanvasEdge(edge.id)}
               />
               <AgentCanvasGroups contents={floor} levelId={activeLevelId} viewport={viewport} />
@@ -380,12 +365,13 @@ export default function AgentCanvasPage(): React.JSX.Element {
             onAttach={(file) => void attachCanvasFile(file, surfaceCenterWorld())}
           />
         )}
-        <AgentCanvasFloorList
+        <AgentCanvasBottomChrome
           document={document}
-          stageHeight={stageHeight}
-          trailing={
-            <AgentCanvasZoomControl zoom={viewport.zoom} onZoomBy={zoomBy} onFit={fitView} />
-          }
+          cards={cards}
+          viewport={viewport}
+          stage={{ width: surfaceRef.current?.clientWidth ?? 0, height: stageHeight }}
+          floorOverview={floorOverview}
+          onZoom={zoomTo}
         />
         {floorOverview ? null : <AgentCanvasSelectionBar />}
         <AgentCanvasPromptDialog />

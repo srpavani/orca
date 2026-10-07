@@ -17,6 +17,8 @@ type AgentCanvasRopesProps = {
   avoidNodes: boolean
   /** Orthogonal circuit routing instead of a hanging rope. */
   circuit: boolean
+  /** Wires a message is crossing right now: the reference draws them in the accent. */
+  activeEdgeIds?: readonly string[]
   onDisconnect: (edge: CanvasEdge) => void
 }
 
@@ -24,6 +26,9 @@ const ROPE_COLOR = 'var(--color-canvas-rope)'
 const ACTIVE_ROPE_COLOR = 'var(--color-canvas-accent)'
 /** Maestri's rope dash: 8 on, 6 off, in screen pixels. */
 const DASH = '8 6'
+/** The reference's BASE_STROKE_WIDTH and ACTIVE_STROKE_WIDTH. */
+const BASE_STROKE = 2
+const ACTIVE_STROKE = 2.5
 
 /**
  * The canvas wires. Ropes hang and swing (see useAgentCanvasRopes), draw in a
@@ -45,49 +50,55 @@ export function AgentCanvasRopes(props: AgentCanvasRopesProps): React.JSX.Elemen
   return (
     <svg ref={svgRef} className="pointer-events-none absolute inset-0 size-full overflow-visible">
       <g transform={transform}>
-        {edges.map((edge) => (
-          <g key={edge.id} data-rope-id={edge.id}>
-            <path
-              data-rope-path=""
-              fill="none"
-              stroke={ROPE_COLOR}
-              strokeWidth={2}
-              strokeDasharray={DASH}
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-            />
-            <g data-rope-cut="" className="pointer-events-auto cursor-pointer">
-              <title>
-                {translate('auto.components.agentCanvas.cutWire', 'Disconnect (revokes access)')}
-              </title>
-              {/* Generous invisible target: the visible glyph is 16px at any zoom. */}
-              <circle r={11} fill="transparent" onClick={() => props.onDisconnect(edge)} />
-              <circle
-                r={8}
-                fill="var(--color-canvas-glass)"
-                stroke={ROPE_COLOR}
-                strokeWidth={1}
-                vectorEffect="non-scaling-stroke"
-              />
+        {edges.map((edge) => {
+          const active = props.activeEdgeIds?.includes(edge.id) ?? false
+          return (
+            <g key={edge.id} data-rope-id={edge.id} data-rope-active={active ? '' : undefined}>
               <path
-                d="M -3 -3 L 3 3 M 3 -3 L -3 3"
-                stroke="var(--color-canvas-glass-text)"
-                strokeWidth={1.5}
+                data-rope-path=""
+                fill="none"
+                stroke={active ? ACTIVE_ROPE_COLOR : ROPE_COLOR}
+                strokeWidth={active ? ACTIVE_STROKE : BASE_STROKE}
+                strokeLinejoin="round"
+                className="transition-[stroke,stroke-width] duration-200"
+                strokeDasharray={DASH}
                 strokeLinecap="round"
                 vectorEffect="non-scaling-stroke"
               />
+              <g data-rope-cut="" className="pointer-events-auto cursor-pointer">
+                <title>
+                  {translate('auto.components.agentCanvas.cutWire', 'Disconnect (revokes access)')}
+                </title>
+                {/* Generous invisible target: the visible glyph is 16px at any zoom. */}
+                <circle r={11} fill="transparent" onClick={() => props.onDisconnect(edge)} />
+                <circle
+                  r={8}
+                  fill="var(--color-canvas-glass)"
+                  stroke={ROPE_COLOR}
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                />
+                <path
+                  d="M -3 -3 L 3 3 M 3 -3 L -3 3"
+                  stroke="var(--color-canvas-glass-text)"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </g>
             </g>
-          </g>
-        ))}
+          )
+        })}
         <path
           data-rope-pending=""
           fill="none"
           stroke={ACTIVE_ROPE_COLOR}
-          strokeWidth={2.5}
+          strokeWidth={BASE_STROKE * 1.2}
           strokeDasharray={DASH}
           strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
         />
+        <circle data-rope-pending-tip="" visibility="hidden" fill={ACTIVE_ROPE_COLOR} />
       </g>
     </svg>
   )

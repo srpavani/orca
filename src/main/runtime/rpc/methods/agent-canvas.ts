@@ -46,6 +46,21 @@ import { sessionNode } from '../../../../shared/spatial-canvas/levels'
 import { findLevelByName } from '../../../../shared/spatial-canvas/recruit'
 import { patchSessionFlags } from '../../../../shared/spatial-canvas/node-flags'
 import type { AgentCanvasSnapshot } from '../../../../shared/spatial-canvas/agent-canvas-snapshot'
+import {
+  activeTransferEdgeIds,
+  edgesBetweenSessions,
+  withTransfer
+} from '../../../agent-canvas/agent-canvas-transfers'
+
+/** The wires a message from `caller` to `target` crosses; none when the target does not resolve. */
+function transferEdges(snapshot: AgentCanvasSnapshot, caller: string, target: string): string[] {
+  try {
+    const peer = resolveConnectedPeer(snapshot, caller, target)
+    return edgesBetweenSessions(snapshot.document, caller, peer.sessionId)
+  } catch {
+    return []
+  }
+}
 
 type TerminalLister = {
   listTerminals(): Promise<{ terminals: CanvasTerminalRow[] }>
@@ -79,10 +94,13 @@ export const AGENT_CANVAS_METHODS = [
     handler: (params, { runtime }) => {
       ensureSonarRunning(getAgentCanvasStore(), runtime as unknown as SonarRuntime)
       const snapshot = getAgentCanvasStore().get()
+      // Why on every answer: a lit wire is not a document change, so it must ride
+      // the unchanged reply too or the canvas would only see it on the next edit.
+      const activeEdges = activeTransferEdgeIds()
       if (params.sinceRevision !== undefined && params.sinceRevision === snapshot.revision) {
-        return { unchanged: true as const, revision: snapshot.revision }
+        return { unchanged: true as const, revision: snapshot.revision, activeEdges }
       }
-      return { unchanged: false as const, snapshot }
+      return { unchanged: false as const, snapshot, activeEdges }
     }
   }),
   defineMethod({
@@ -106,15 +124,17 @@ export const AGENT_CANVAS_METHODS = [
     params: AgentCanvasAskParams,
     handler: async (params, { runtime, signal }) => {
       const { caller, snapshot } = await callerOf(runtime, params)
-      return askConnectedPeer({
-        snapshot,
-        runtime: runtime as unknown as AgentCanvasAskRuntime,
-        callerSessionId: caller,
-        target: params.to,
-        prompt: params.prompt,
-        ...(params.timeoutMs ? { timeoutMs: params.timeoutMs } : {}),
-        ...(signal ? { signal } : {})
-      })
+      return withTransfer(transferEdges(snapshot, caller, params.to), () =>
+        askConnectedPeer({
+          snapshot,
+          runtime: runtime as unknown as AgentCanvasAskRuntime,
+          callerSessionId: caller,
+          target: params.to,
+          prompt: params.prompt,
+          ...(params.timeoutMs ? { timeoutMs: params.timeoutMs } : {}),
+          ...(signal ? { signal } : {})
+        })
+      )
     }
   }),
   defineMethod({
@@ -122,13 +142,15 @@ export const AGENT_CANVAS_METHODS = [
     params: AgentCanvasCheckParams,
     handler: async (params, { runtime }) => {
       const { caller, snapshot } = await callerOf(runtime, params)
-      return readConnectedPeer({
-        snapshot,
-        runtime: runtime as unknown as AgentCanvasAskRuntime,
-        callerSessionId: caller,
-        target: params.to,
-        ...(params.lines === undefined ? {} : { lines: params.lines })
-      })
+      return withTransfer(transferEdges(snapshot, caller, params.to), () =>
+        readConnectedPeer({
+          snapshot,
+          runtime: runtime as unknown as AgentCanvasAskRuntime,
+          callerSessionId: caller,
+          target: params.to,
+          ...(params.lines === undefined ? {} : { lines: params.lines })
+        })
+      )
     }
   }),
   defineMethod({

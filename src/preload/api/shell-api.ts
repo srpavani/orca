@@ -17,6 +17,11 @@ export type ShellApi = {
     request: ShellOpenExternalEditorRequest
   ) => Promise<ShellOpenExternalEditorResult>
   openUrl: (url: string) => Promise<void>
+  /** A region of this window (CSS px) as a JPEG data URL; the canvas's floor snapshots. */
+  captureCanvasRegion?: (
+    region: { x: number; y: number; width: number; height: number },
+    maxWidth: number
+  ) => Promise<string | null>
   openFilePath: (path: string) => Promise<boolean>
   openFileUri: (uri: string) => Promise<void>
   pathsExist?: (paths: string[]) => Promise<boolean[]>

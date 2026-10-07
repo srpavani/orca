@@ -42,6 +42,8 @@ type AgentCanvasState = Omit<AgentCanvasSnapshot, 'revision'> & {
   drawTool: 'rect' | 'ellipse' | 'arrow' | 'freehand' | null
   /** True while the floor stack is engaged. */
   floorOverview: boolean
+  /** Wires a message is crossing right now; they draw in the accent, thicker. */
+  activeEdgeIds: readonly string[]
 }
 
 const LOCAL_RUNTIME = { kind: 'local' } as const
@@ -68,11 +70,13 @@ const store = createStore<AgentCanvasState>(() => ({
   loaded: false,
   activeLevelId: null,
   drawTool: null,
-  floorOverview: false
+  floorOverview: false,
+  activeEdgeIds: []
 }))
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 let pushing = false
+let saveHoneymoon = 0
 
 function adoptHost(snapshot: AgentCanvasSnapshot, keepLocalEdits: boolean): void {
   store.setState((state) => ({
@@ -102,6 +106,7 @@ async function flushToHost(): Promise<void> {
     return
   }
   pushing = true
+  saveHoneymoon = Date.now() + 1000
   const sent = store.getState()
   try {
     const saved = await pushToHost(
@@ -131,9 +136,17 @@ export function startCanvasHostSync(intervalMs = 1500): () => void {
     if (stopped || pushing || persistTimer !== null) {
       return
     }
+    const now = Date.now()
+    if (now < saveHoneymoon) {
+      return
+    }
     const { loaded, hostRevision } = store.getState()
     try {
       const result = await transport.get(loaded ? hostRevision : undefined)
+      const lit = result.activeEdges ?? []
+      if (lit.join() !== store.getState().activeEdgeIds.join()) {
+        store.setState({ activeEdgeIds: lit })
+      }
       if (!stopped && !result.unchanged && persistTimer === null && !pushing) {
         adoptHost(result.snapshot, false)
       }

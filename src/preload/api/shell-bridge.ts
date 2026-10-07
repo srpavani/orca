@@ -19,6 +19,11 @@ export const shellApi = {
 
   openUrl: (url: string): Promise<void> => ipcRenderer.invoke('shell:openUrl', url),
 
+  captureCanvasRegion: (
+    region: { x: number; y: number; width: number; height: number },
+    maxWidth: number
+  ): Promise<string | null> => ipcRenderer.invoke('shell:captureCanvasRegion', region, maxWidth),
+
   openFilePath: (path: string): Promise<boolean> => ipcRenderer.invoke('shell:openFilePath', path),
 
   openFileUri: (uri: string): Promise<void> => ipcRenderer.invoke('shell:openFileUri', uri),

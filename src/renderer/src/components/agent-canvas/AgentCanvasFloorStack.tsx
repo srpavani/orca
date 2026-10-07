@@ -54,22 +54,31 @@ export function AgentCanvasFloorCard(props: {
         ].join(', ')
       }}
     >
-      {props.children ?? (
-        <div className="flex size-full flex-col items-center justify-center gap-1 px-8 text-center">
-          <span
-            className="text-2xl font-medium leading-tight"
-            style={{ color: 'color-mix(in srgb, var(--foreground) 62%, transparent)' }}
-          >
-            {item.name}
-          </span>
-          <span
-            className="text-sm leading-tight"
-            style={{ color: 'color-mix(in srgb, var(--foreground) 42%, transparent)' }}
-          >
-            {item.detail}
-          </span>
-        </div>
-      )}
+      {props.children ??
+        (item.snapshot ? (
+          // The reference's FloorCard: the floor's last picture fills the sheet.
+          <img
+            src={item.snapshot}
+            alt=""
+            data-floor-snapshot=""
+            className="absolute inset-0 size-full object-cover"
+          />
+        ) : (
+          <div className="flex size-full flex-col items-center justify-center gap-1 px-8 text-center">
+            <span
+              className="text-2xl font-medium leading-tight"
+              style={{ color: 'color-mix(in srgb, var(--foreground) 62%, transparent)' }}
+            >
+              {item.name}
+            </span>
+            <span
+              className="text-sm leading-tight"
+              style={{ color: 'color-mix(in srgb, var(--foreground) 42%, transparent)' }}
+            >
+              {item.detail}
+            </span>
+          </div>
+        ))}
     </div>
   )
 }

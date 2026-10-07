@@ -11,6 +11,8 @@ import { getAgentCanvasState, setCanvasViewport } from './agent-canvas-store'
 type ViewControls = {
   /** Zoom one step, keeping the stage's centre still. */
   zoomBy: (direction: 1 | -1) => void
+  /** Zoom to an exact level (the pill's scrub and its reset to 100%), centre still. */
+  zoomTo: (zoom: number) => void
   /** Frame every card on the floor. */
   fitView: () => void
 }
@@ -47,11 +49,15 @@ export function useCanvasViewControls(input: {
     }
   }
 
-  const zoomBy = (direction: 1 | -1): void => {
+  // The reference's zoomFromViewportCenter: every pill zoom keeps the stage centre still.
+  const zoomTo = (zoom: number): void => {
     const stage = stageSizeOf(latest.current.surfaceRef.current)
     const centre = { x: stage.width / 2, y: stage.height / 2 }
-    const current = getAgentCanvasState().viewport
-    setCanvasViewport(zoomAtPoint(current, nextZoomLevel(current.zoom, direction, null), centre))
+    setCanvasViewport(zoomAtPoint(getAgentCanvasState().viewport, zoom, centre))
+  }
+
+  const zoomBy = (direction: 1 | -1): void => {
+    zoomTo(nextZoomLevel(getAgentCanvasState().viewport.zoom, direction, null))
   }
 
   const signature = input.cards.map((node) => node.id).join(',')
@@ -73,5 +79,5 @@ export function useCanvasViewControls(input: {
     }
   }, [input.loaded, signature])
 
-  return { zoomBy, fitView }
+  return { zoomBy, zoomTo, fitView }
 }

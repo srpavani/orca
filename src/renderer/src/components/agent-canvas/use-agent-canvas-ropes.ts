@@ -2,6 +2,7 @@ import React from 'react'
 import {
   ROPE_FIXED_DT,
   ROPE_MAX_SUBSTEPS,
+  closestEdgeMidpoint,
   createRope,
   repinRope,
   ropeEndpoints,
@@ -34,10 +35,6 @@ type RopeInput = {
 
 type RopeParts = { path: SVGPathElement | null; cut: SVGGElement | null }
 
-function frameAt(point: CanvasPoint): { x: number; y: number; width: number; height: number } {
-  return { x: point.x, y: point.y, width: 0, height: 0 }
-}
-
 function screenToWorld(point: CanvasPoint, viewport: CanvasViewport): CanvasPoint {
   return {
     x: viewport.origin.x + point.x / viewport.zoom,
@@ -57,7 +54,7 @@ export function useAgentCanvasRopes(input: RopeInput): React.RefObject<SVGSVGEle
   const ropes = React.useRef(new Map<string, Rope>())
   const obstacles = React.useRef(new Map<string, RopeObstacle[]>())
   const parts = React.useRef(new Map<string, RopeParts>())
-  const pending = React.useRef<Rope | null>(null)
+
   const latest = React.useRef(input)
   latest.current = input
 
@@ -70,22 +67,11 @@ export function useAgentCanvasRopes(input: RopeInput): React.RefObject<SVGSVGEle
       input.nodes,
       input.avoidNodes
     )
-    paint(svgRef.current, ropes.current, parts.current, latest.current, pending.current)
+    paint(svgRef.current, ropes.current, parts.current, latest.current)
   }, [input.edges, input.nodes, input.avoidNodes])
 
   React.useEffect(() => {
-    const source = input.pending
-    if (!source) {
-      pending.current = null
-      return
-    }
-    const end = screenToWorld(source.cursor, input.viewport)
-    const start = ropeEndpoints(source.fromNode.frame, frameAt(end)).start
-    if (pending.current) {
-      repinRope(pending.current, start, end)
-    } else {
-      pending.current = createRope(start, end)
-    }
+    paint(svgRef.current, ropes.current, parts.current, latest.current)
   }, [input.pending, input.viewport])
 
   React.useEffect(() => {
@@ -104,8 +90,8 @@ export function useAgentCanvasRopes(input: RopeInput): React.RefObject<SVGSVGEle
         steps += 1
         moving = stepAll(ropes.current, obstacles.current, latest.current) || moving
       }
-      if (moving || latest.current.pending !== null) {
-        paint(svgRef.current, ropes.current, parts.current, latest.current, pending.current)
+      if (moving) {
+        paint(svgRef.current, ropes.current, parts.current, latest.current)
       }
     }
     frame = requestAnimationFrame(tick)
@@ -128,6 +114,19 @@ function anchorsFor(
   const from = byId.get(edge.fromNodeId)
   const to = byId.get(edge.toNodeId)
   return from && to ? ropeEndpoints(from.frame, to.frame) : null
+}
+
+/** How recent a wire must be to be born sagged and drop: just made, not loaded. */
+const FRESH_EDGE_MS = 4000
+
+/**
+ * Why by age: the ropes already on the board when it opens are hung at rest;
+ * only a wire the user just made is born in the reference's parabola and
+ * swings into place.
+ */
+function isFreshEdge(edge: CanvasEdge): boolean {
+  const age = Date.now() - Date.parse(edge.createdAt)
+  return Number.isFinite(age) && age >= 0 && age < FRESH_EDGE_MS
 }
 
 /** Creates, drops and re-anchors ropes to match the rendered edges. */
@@ -155,9 +154,13 @@ function syncRopes(
       repinRope(existing, anchors.start, anchors.end)
       continue
     }
+    // The connect animation: a new wire starts sagged and swings to rest under the
+    // physics loop, exactly as the reference wakes a rope with no saved points.
     ropes.set(
       edge.id,
-      settleRope(createRope(anchors.start, anchors.end), obstacles.get(edge.id) ?? [])
+      isFreshEdge(edge)
+        ? createRope(anchors.start, anchors.end, true)
+        : settleRope(createRope(anchors.start, anchors.end), obstacles.get(edge.id) ?? [])
     )
   }
   for (const id of ropes.keys()) {
@@ -187,7 +190,7 @@ function stepAll(
       moving = true
     }
   }
-  return moving || input.pending !== null
+  return moving
 }
 
 function paintParts(svg: SVGSVGElement, edgeId: string, cache: Map<string, RopeParts>): RopeParts {
@@ -208,8 +211,7 @@ function paint(
   svg: SVGSVGElement | null,
   ropes: Map<string, Rope>,
   parts: Map<string, RopeParts>,
-  input: RopeInput,
-  pendingRope: Rope | null
+  input: RopeInput
 ): void {
   if (!svg) {
     return
@@ -223,8 +225,21 @@ function paint(
     const mid = ropeMidpoint(rope.points)
     cut?.setAttribute('transform', `translate(${mid.x} ${mid.y}) scale(${inverseZoom})`)
   }
+  // The reference's connect preview: a straight accent dash from the source's
+  // nearest side midpoint to the cursor, with a 3px dot riding the tip.
   const pendingPath = svg.querySelector('[data-rope-pending]')
-  if (pendingPath) {
-    pendingPath.setAttribute('d', pendingRope ? ropePath(pendingRope.points) : '')
+  const tip = svg.querySelector('[data-rope-pending-tip]')
+  const source = input.pending
+  if (!source) {
+    pendingPath?.setAttribute('d', '')
+    tip?.setAttribute('visibility', 'hidden')
+    return
   }
+  const end = screenToWorld(source.cursor, input.viewport)
+  const start = closestEdgeMidpoint(source.fromNode.frame, end)
+  pendingPath?.setAttribute('d', `M ${start.x} ${start.y} L ${end.x} ${end.y}`)
+  tip?.setAttribute('cx', String(end.x))
+  tip?.setAttribute('cy', String(end.y))
+  tip?.setAttribute('r', String(3 * inverseZoom))
+  tip?.setAttribute('visibility', 'visible')
 }

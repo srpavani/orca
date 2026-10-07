@@ -17711,7 +17711,12 @@
         "portalLoading": "Loading page",
         "textBlock": "Text block",
         "editTextBlock": "Edit text block",
-        "textPlaceholderShort": "Text"
+        "textPlaceholderShort": "Text",
+        "newFloorMenu": "New Floor",
+        "configureHooks": "Configure Hooks…",
+        "minimap": "Minimap",
+        "closeMinimap": "Close minimap",
+        "zoomLevel": "Zoom level"
       }
     },
     "i18n": {

@@ -8,10 +8,14 @@ export type CanvasLocalState = {
 }
 
 export type CanvasHostTransport = {
-  get(
-    sinceRevision?: number
-  ): Promise<
-    { unchanged: true; revision: number } | { unchanged: false; snapshot: AgentCanvasSnapshot }
+  get(sinceRevision?: number): Promise<
+    (
+      | { unchanged: true; revision: number }
+      | { unchanged: false; snapshot: AgentCanvasSnapshot }
+    ) & {
+      /** Wires carrying a message right now (the reference's active transfers). */
+      activeEdges?: string[]
+    }
   >
   save(
     input: CanvasLocalState & { baseRevision: number }

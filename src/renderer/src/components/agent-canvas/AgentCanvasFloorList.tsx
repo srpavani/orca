@@ -1,5 +1,12 @@
 import React from 'react'
-import { Cloud, CloudOff, GitMerge, Layers, Layers2, Plus, X, Zap } from 'lucide-react'
+import { Check, Cloud, CloudOff, GitMerge, Layers, Layers2, Plus, X, Zap } from 'lucide-react'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger
+} from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { canUnloadFloor, levelIsUnloaded } from '../../../../shared/spatial-canvas/floor-lifecycle'
@@ -15,7 +22,8 @@ import { openCanvasPrompt } from './agent-canvas-prompt'
 import { openNewFloorSheet } from './agent-canvas-new-floor'
 import { openFloorHooksSheet } from './agent-canvas-floor-hooks-sheet'
 import { openLandingSheet } from './agent-canvas-landing'
-import { setCanvasViewState, useAgentCanvas } from './agent-canvas-store'
+import { toggleFloorOverview } from './agent-canvas-floor-snapshots'
+import { useAgentCanvas } from './agent-canvas-store'
 
 /** One row of the floor list, matching the reference's 38px item. */
 const ITEM_HEIGHT = 38
@@ -51,7 +59,7 @@ export function AgentCanvasFloorList(props: {
   return (
     <div
       data-canvas-chrome=""
-      className="pointer-events-none absolute bottom-4 right-4 z-30 flex flex-col items-end gap-2"
+      className="pointer-events-none absolute bottom-3 right-3 z-30 flex flex-col items-end gap-2"
       // Why: this chrome sits inside the board surface, whose pointerdown closes the
       // floor stack. Without this a press on New floor (or any row) closed and
       // unmounted the list before its click could land, so nothing happened.
@@ -227,14 +235,21 @@ export function AgentCanvasFloorList(props: {
           </div>
         </div>
       ) : null}
-      {/* Why one row: the reference keeps the zoom with the floor control, and
-          two absolutely-positioned groups in the same corner would overlap. */}
-      <div className="flex items-center gap-2">
+      {/* The reference's bottom-right row: floor indicator, minimap, zoom pill. */}
+      <div className="flex items-end gap-2">
         <FloorPill
           overview={overview}
           hasFloors={hasFloors}
           activeName={activeName}
-          onToggle={() => setCanvasViewState({ floorOverview: !overview })}
+          floors={levels.map((level) => ({
+            id: level.id,
+            label:
+              level.id === null
+                ? translate('auto.components.agentCanvas.groundFloor', 'Ground')
+                : level.name
+          }))}
+          activeLevelId={activeLevelId}
+          onToggle={toggleFloorOverview}
         />
         {props.trailing}
       </div>
@@ -247,39 +262,76 @@ function floorItemDelay(indexFromBottom: number): React.CSSProperties {
   return { animationDelay: `${indexFromBottom * 30}ms` }
 }
 
-/** The glass pill that names the current floor and opens the stack. */
+/**
+ * The reference's FloorIndicatorButton: a glass pill naming the floor you are
+ * on (Layers2), which opens the stack (Layers, in the accent). Right-click
+ * lists every floor as a check item — Ground first, then a separator — plus
+ * New Floor and Configure Hooks….
+ */
 function FloorPill(props: {
   overview: boolean
   hasFloors: boolean
   activeName: string
+  floors: readonly { id: CanvasLevelId; label: string }[]
+  activeLevelId: CanvasLevelId
   onToggle: () => void
 }): React.JSX.Element {
   const Icon = props.overview ? Layers : Layers2
   const title = translate('auto.components.agentCanvas.floorsTitle', 'Floors')
   return (
-    <button
-      type="button"
-      onClick={props.onToggle}
-      aria-expanded={props.overview}
-      title={title}
-      className={cn(
-        'canvas-glass pointer-events-auto flex h-[34px] items-center justify-center gap-1 rounded-full px-2.5',
-        'text-[10px] font-medium outline-none'
-      )}
-      style={{ minWidth: props.hasFloors ? undefined : 40 }}
-    >
-      <Icon
-        className="size-[13px] shrink-0"
-        strokeWidth={2.25}
-        style={{ color: props.overview ? 'var(--color-canvas-accent)' : undefined }}
-      />
-      <span className="sr-only">{title}: </span>
-      <span className={props.hasFloors ? 'max-w-32 truncate' : 'sr-only'}>
-        {props.overview ? title : props.activeName}
-      </span>
-    </button>
+    <div className="canvas-glass pointer-events-auto flex items-center rounded-full">
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <button
+            type="button"
+            onClick={props.onToggle}
+            aria-expanded={props.overview}
+            title={title}
+            className="flex h-[34px] items-center justify-center gap-1 rounded-full px-2 text-[10px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            style={{ minWidth: props.hasFloors ? undefined : 40 }}
+          >
+            <Icon
+              className="size-[13px] shrink-0"
+              strokeWidth={2.25}
+              style={{ color: props.overview ? 'var(--color-canvas-accent)' : undefined }}
+            />
+            <span className="sr-only">{title}: </span>
+            <span className={props.hasFloors ? 'max-w-[120px] truncate' : 'sr-only'}>
+              {props.overview ? title : props.activeName}
+            </span>
+          </button>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {props.floors.map((floor, index) => (
+            <React.Fragment key={floor.id ?? 'ground'}>
+              {index === 1 ? <ContextMenuSeparator /> : null}
+              <ContextMenuItem
+                role="menuitemcheckbox"
+                aria-checked={floor.id === props.activeLevelId}
+                onSelect={() => switchCanvasLevel(floor.id)}
+              >
+                {floor.id === props.activeLevelId ? (
+                  <Check />
+                ) : (
+                  <span aria-hidden className="size-3.5" />
+                )}
+                {floor.label}
+              </ContextMenuItem>
+            </React.Fragment>
+          ))}
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={openNewFloorSheet}>
+            <Plus />
+            {translate('auto.components.agentCanvas.newFloorMenu', 'New Floor')}
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={openFloorHooksSheet}>
+            <Zap />
+            {translate('auto.components.agentCanvas.configureHooks', 'Configure Hooks…')}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    </div>
   )
 }
-
 /** Kept for the level bar's own floor jump; see AgentCanvasLevelBar. */
 export type FloorLevelId = CanvasLevelId
