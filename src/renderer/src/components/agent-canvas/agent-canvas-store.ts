@@ -12,6 +12,7 @@ import {
 import { bodyIdsOfNode } from '../../../../shared/spatial-canvas/node-ops'
 import {
   syncSessionNodes,
+  withoutSessions,
   type CanvasLiveSession
 } from '../../../../shared/spatial-canvas/session-placement'
 import type {
@@ -35,6 +36,7 @@ type AgentCanvasState = Omit<AgentCanvasSnapshot, 'revision'> & {
   hostRevision: number
   /** Note bodies as of `hostRevision`, so a rebase can tell user edits from agent edits. */
   hostNotes: Record<string, string>
+  hostDocument: CanvasDocument
   loaded: boolean
   /** The floor being shown; null is the ground level. View state only, never persisted. */
   activeLevelId: string | null
@@ -65,21 +67,25 @@ function transportFor(projectKey: string | null): CanvasHostTransport {
 }
 
 const initial = emptyAgentCanvasSnapshot()
-const store = createStore<AgentCanvasState>(() => ({
-  document: initial.document,
-  viewport: initial.viewport,
-  notes: initial.notes,
-  selectedNodeId: null,
-  selectedNodeIds: [],
-  hostRevision: 0,
-  hostNotes: {},
-  loaded: false,
-  activeLevelId: null,
-  drawTool: null,
-  floorOverview: false,
-  activeEdgeIds: [],
-  projectKey: null
-}))
+/** An unloaded board: what the app starts on, and what a project switch resets to. */
+function blankBoard(projectKey: string | null): Omit<AgentCanvasState, 'drawTool'> {
+  return {
+    document: initial.document,
+    viewport: initial.viewport,
+    notes: initial.notes,
+    selectedNodeId: null,
+    selectedNodeIds: [],
+    hostRevision: 0,
+    hostNotes: {},
+    hostDocument: initial.document,
+    loaded: false,
+    activeLevelId: null,
+    floorOverview: false,
+    activeEdgeIds: [],
+    projectKey
+  }
+}
+const store = createStore<AgentCanvasState>(() => ({ ...blankBoard(null), drawTool: null }))
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 let pushing = false
@@ -93,6 +99,7 @@ function adoptHost(snapshot: AgentCanvasSnapshot, keepLocalEdits: boolean): void
       : { document: snapshot.document, viewport: snapshot.viewport, notes: snapshot.notes }),
     hostRevision: snapshot.revision,
     hostNotes: snapshot.notes,
+    hostDocument: snapshot.document,
     loaded: true,
     selectedNodeId: state.selectedNodeId
   }))
@@ -120,7 +127,7 @@ async function flushToHost(): Promise<void> {
     const saved = await pushToHost(
       transportFor(sent.projectKey),
       { document: sent.document, viewport: sent.viewport, notes: sent.notes },
-      { revision: sent.hostRevision, notes: sent.hostNotes }
+      { revision: sent.hostRevision, notes: sent.hostNotes, document: sent.hostDocument }
     )
     const now = store.getState()
     if (now.projectKey !== sent.projectKey) {
@@ -200,12 +207,18 @@ export function setCanvasViewport(viewport: CanvasViewport): void {
   schedulePersist()
 }
 
-export function syncCanvasSessions(sessions: readonly CanvasLiveSession[]): void {
+/** Places this board's sessions; drops cards of sessions live in another project. */
+export function syncCanvasSessions(
+  sessions: readonly CanvasLiveSession[],
+  foreignSessionIds: ReadonlySet<string> = new Set()
+): void {
   // Why: placing sessions before the host copy loads would save over the user's saved layout.
   if (!store.getState().loaded) {
     return
   }
-  updateDocument((document) => syncSessionNodes(document, sessions))
+  updateDocument((document) =>
+    syncSessionNodes(withoutSessions(document, foreignSessionIds), sessions)
+  )
 }
 
 export function moveCanvasNode(nodeId: CanvasNodeId, at: CanvasPoint): void {
@@ -334,20 +347,7 @@ export function setCanvasProjectContext(projectKey: string | null): void {
     // Why before the reset: flushToHost captures the current board synchronously.
     void flushToHost()
   }
-  store.setState({
-    document: initial.document,
-    viewport: initial.viewport,
-    notes: initial.notes,
-    hostRevision: 0,
-    hostNotes: {},
-    loaded: false,
-    activeLevelId: null,
-    selectedNodeId: null,
-    selectedNodeIds: [],
-    floorOverview: false,
-    activeEdgeIds: [],
-    projectKey
-  })
+  store.setState(blankBoard(projectKey))
   for (const poll of pollers) {
     void poll()
   }

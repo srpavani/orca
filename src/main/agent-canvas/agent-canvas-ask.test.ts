@@ -158,3 +158,38 @@ describe('ask back', () => {
     expect(calls).toContain('send:term_a')
   })
 })
+
+describe('waiting for the peer to finish', () => {
+  it('waits again while the peer is still painting after an early idle verdict', async () => {
+    const { runtime, calls } = fakeRuntime()
+    let painting = true
+    runtime.listTerminals = async () => ({
+      terminals: [
+        { handle: 'term_a', tabId: 'tab-a', connected: true },
+        {
+          handle: 'term_b',
+          tabId: 'tab-b',
+          connected: true,
+          lastOutputAt: painting ? Date.now() : Date.now() - 60_000
+        }
+      ]
+    })
+    const waitForTerminal = runtime.waitForTerminal
+    runtime.waitForTerminal = async (handle, opts) => {
+      const result = await waitForTerminal(handle, opts)
+      // The spinner stops once the turn has been waited on twice.
+      if (calls.filter((call) => call === `wait:${handle}`).length >= 2) {
+        painting = false
+      }
+      return result
+    }
+    await askConnectedPeer({
+      snapshot: snapshotWith(true),
+      runtime,
+      callerSessionId: 'tab-a',
+      target: 'Beta',
+      prompt: 'review'
+    })
+    expect(calls.filter((call) => call === 'wait:term_b')).toHaveLength(2)
+  })
+})

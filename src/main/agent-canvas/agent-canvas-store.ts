@@ -6,6 +6,8 @@ import {
   parseAgentCanvasSnapshot,
   type AgentCanvasSnapshot
 } from '../../shared/spatial-canvas/agent-canvas-snapshot'
+import { rebaseDocument } from '../../shared/spatial-canvas/document-rebase'
+import type { CanvasDocument } from '../../shared/spatial-canvas/types'
 import {
   hardenExistingSecureFile,
   isUnreadableError,
@@ -66,6 +68,18 @@ export class AgentCanvasStore {
       listener(next)
     }
     return next
+  }
+
+  /**
+   * Applies what an operation changed between `before` and `after` over the board
+   * as it is now. Why: recruit and replace await a terminal for seconds, and a
+   * plain overwrite would erase every edit made to the board meanwhile.
+   */
+  applyDelta(before: CanvasDocument, after: CanvasDocument): AgentCanvasSnapshot {
+    return this.update((current) => ({
+      ...current,
+      document: rebaseDocument(current.document, before, after)
+    }))
   }
 
   subscribe(listener: AgentCanvasListener): () => void {

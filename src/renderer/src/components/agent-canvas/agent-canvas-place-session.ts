@@ -1,6 +1,6 @@
-import { addNode, createSessionNode } from '../../../../shared/spatial-canvas/document'
-import { gridSlot } from '../../../../shared/spatial-canvas/session-placement'
-import { levelContents, sessionNode } from '../../../../shared/spatial-canvas/levels'
+import { addNode, createSessionNode, removeNode } from '../../../../shared/spatial-canvas/document'
+import { freeGridSlot } from '../../../../shared/spatial-canvas/session-placement'
+import { everyEdge, levelContents, sessionNode } from '../../../../shared/spatial-canvas/levels'
 import type { CanvasLevelId, CanvasRect } from '../../../../shared/spatial-canvas/types'
 import { getAgentCanvasState, selectCanvasNodes, updateDocument } from './agent-canvas-store'
 /**
@@ -17,14 +17,25 @@ export function placeCanvasSessionAt(
 ): string | null {
   const existing = sessionNode(getAgentCanvasState().document, sessionId)
   if (existing) {
-    return existing.id
+    // Why: the sync can file the new tab on its branch's floor before the create call
+    // returns. An unnamed, unwired card is that copy; the board's request replaces it.
+    const syncCopy =
+      existing.content.kind === 'session' &&
+      !existing.content.name &&
+      !everyEdge(getAgentCanvasState().document).some(
+        (edge) => edge.fromNodeId === existing.id || edge.toNodeId === existing.id
+      )
+    if (!syncCopy) {
+      return existing.id
+    }
+    updateDocument((document) => removeNode(document, existing.id))
   }
   const floor =
     levelContents(getAgentCanvasState().document, levelId) ?? getAgentCanvasState().document.root
   const node = createSessionNode({
     sessionId,
     label,
-    at: gridSlot(floor.nodes.filter((item) => item.content.kind === 'session').length),
+    at: freeGridSlot(floor),
     size: getAgentCanvasState().document.elementDefaults?.sessionSize
   })
   if (frame) {

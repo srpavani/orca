@@ -3,6 +3,7 @@ import {
   addNode,
   createSessionNode,
   newCanvasId,
+  removeNode,
   type CanvasIdFactory
 } from './document'
 import { GROUND_ORIGIN } from './geometry'
@@ -34,6 +35,27 @@ export function gridSlot(index: number): CanvasPoint {
   return {
     x: GROUND_ORIGIN.x + GRID_GAP + column * (DEFAULT_NODE_SIZE.width + GRID_GAP),
     y: GROUND_ORIGIN.y + GRID_GAP + row * (DEFAULT_NODE_SIZE.height + GRID_GAP)
+  }
+}
+
+/**
+ * The first grid slot no card on `contents` overlaps. Why not the session count:
+ * cards the user placed by hand sit off the grid, and counting put new
+ * terminals right on top of them.
+ */
+export function freeGridSlot(contents: Pick<CanvasLevelContents, 'nodes'>): CanvasPoint {
+  for (let index = 0; ; index += 1) {
+    const at = gridSlot(index)
+    const taken = contents.nodes.some(
+      (node) =>
+        node.frame.x < at.x + DEFAULT_NODE_SIZE.width &&
+        at.x < node.frame.x + node.frame.width &&
+        node.frame.y < at.y + DEFAULT_NODE_SIZE.height &&
+        at.y < node.frame.y + node.frame.height
+    )
+    if (!taken) {
+      return at
+    }
   }
 }
 
@@ -79,10 +101,15 @@ function relabel(
   return changed ? { ...contents, nodes } : contents
 }
 
-function slotCount(document: CanvasDocument, levelId: CanvasLevelId): number {
-  const contents =
-    levelId === null ? document.root : document.levels.find((level) => level.id === levelId)
-  return contents?.nodes.filter((node) => node.content.kind === 'session').length ?? 0
+function levelContentsOf(
+  document: CanvasDocument,
+  levelId: CanvasLevelId
+): Pick<CanvasLevelContents, 'nodes'> {
+  return (
+    (levelId === null ? document.root : document.levels.find((level) => level.id === levelId)) ?? {
+      nodes: []
+    }
+  )
 }
 
 /**
@@ -125,7 +152,7 @@ export function syncSessionNodes(
     const node = createSessionNode({
       sessionId: session.sessionId,
       label: session.label,
-      at: gridSlot(slotCount(next, levelId)),
+      at: freeGridSlot(levelContentsOf(next, levelId)),
       id
     })
     next = addNode(next, node, levelId)
@@ -214,4 +241,22 @@ export function repairSurfaceSessionIds(document: CanvasDocument): CanvasDocumen
     root: fix(document.root),
     levels: document.levels.map((level) => ({ ...level, ...fix(level) }))
   }
+}
+
+/**
+ * Drops the cards of `sessionIds`. Why: per-project boards are seeded from the
+ * old shared canvas, so a project could otherwise show — and wire — a terminal
+ * that is live in another repository.
+ */
+export function withoutSessions(
+  document: CanvasDocument,
+  sessionIds: ReadonlySet<string>
+): CanvasDocument {
+  if (sessionIds.size === 0) {
+    return document
+  }
+  const foreign = everyNode(document)
+    .filter((node) => node.content.kind === 'session' && sessionIds.has(node.content.sessionId))
+    .map((node) => node.id)
+  return foreign.reduce(removeNode, document)
 }

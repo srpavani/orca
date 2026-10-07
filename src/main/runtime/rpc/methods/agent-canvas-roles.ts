@@ -103,15 +103,16 @@ export const AGENT_CANVAS_ROLE_METHODS = [
         )
       }
       // Why a restart: a role is the agent's starting context, as in the reference.
+      const before = store.get().document
       const swapped = await replaceAgent({
-        document: store.get().document,
+        document: before,
         runtime,
         sessionId: peer.sessionId,
         launch: launchOf({ agent }, role, undefined),
         roleId: role?.id ?? null,
         ...(signal ? { signal } : {})
       })
-      const saved = store.update((current) => ({ ...current, document: swapped.document }))
+      const saved = store.applyDelta(before, swapped.document)
       const projectKey = linkedProjectKey ?? caller.projectKey
       if (projectKey !== null) {
         getAgentCanvasCrossLinks().renameSession(

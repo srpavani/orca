@@ -8,7 +8,7 @@ import {
 } from './document'
 import { levelContents, levelIdOfNode, levelsOf } from './levels'
 import { duplicateSessionLabel } from './reachability'
-import { gridSlot } from './session-placement'
+import { freeGridSlot } from './session-placement'
 import type {
   CanvasDocument,
   CanvasLevelId,
@@ -71,7 +71,7 @@ export function placeRecruit(
   const node = createSessionNode({
     sessionId: input.sessionId,
     label: input.label,
-    at: gridSlot(onFloor.nodes.filter((item) => item.content.kind === 'session').length),
+    at: freeGridSlot(onFloor),
     id
   })
   // Why pinned: a recruit is addressed by the name it was created with, so a later

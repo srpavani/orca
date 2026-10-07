@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { addNode, createDocument, createSessionNode } from './document'
+import { addNode, connectNodes, createDocument, createSessionNode } from './document'
 import { createLevel } from './level-edits'
 import { levelIdOfNode, sessionNode } from './levels'
-import { floorForBranch, gridSlot, normalizeBranch, syncSessionNodes } from './session-placement'
+import {
+  floorForBranch,
+  freeGridSlot,
+  gridSlot,
+  normalizeBranch,
+  syncSessionNodes,
+  withoutSessions
+} from './session-placement'
 
 function ids(): () => string {
   let next = 0
@@ -57,5 +64,35 @@ describe('session placement by branch', () => {
     )
     expect(synced).toBe(onGround)
     expect(levelIdOfNode(synced, sessionNode(synced, 'b')!.id)).not.toBe(levelId)
+  })
+})
+
+describe('withoutSessions', () => {
+  it('drops only the cards of the named sessions, with their wires', () => {
+    const ours = createSessionNode({ sessionId: 'ours', label: 'Ours', at: { x: 0, y: 0 } })
+    const theirs = createSessionNode({ sessionId: 'theirs', label: 'Theirs', at: { x: 0, y: 0 } })
+    const wired = connectNodes(
+      addNode(addNode(createDocument(), ours), theirs),
+      ours.id,
+      theirs.id,
+      'now'
+    )!
+    const kept = withoutSessions(wired.document, new Set(['theirs']))
+    expect(kept.root.nodes.map((node) => node.id)).toEqual([ours.id])
+    expect(kept.root.edges).toEqual([])
+    expect(withoutSessions(wired.document, new Set())).toBe(wired.document)
+  })
+})
+
+describe('freeGridSlot', () => {
+  it('skips slots a hand-placed card overlaps', () => {
+    const first = gridSlot(0)
+    const handPlaced = createSessionNode({
+      sessionId: 'mine',
+      label: 'Mine',
+      at: { x: first.x + 40, y: first.y + 50 }
+    })
+    expect(freeGridSlot({ nodes: [handPlaced] })).toEqual(gridSlot(1))
+    expect(freeGridSlot({ nodes: [] })).toEqual(first)
   })
 })

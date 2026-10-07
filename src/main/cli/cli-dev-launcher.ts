@@ -46,6 +46,22 @@ export async function ensureDevLauncher(args: {
       mode: 0o755
     })
   }
+  if (args.platform === 'win32') {
+    // Why: agents on Windows (Claude Code, Codex) run commands in Git Bash, which never
+    // resolves `orca` to `orca.cmd`; packaged builds ship orca.exe, dev builds need this twin.
+    const posix = (value: string): string => value.replaceAll('\\', '/')
+    const twin = buildUnixDevLauncher(
+      posix(args.execPath),
+      posix(args.cliEntryPath),
+      posix(args.userDataPath)
+    )
+    // Why `orca` too: the dev command is `orca-dev`, but agents are taught `orca`.
+    const names =
+      args.commandName === DEV_COMMAND_NAME ? [args.commandName, 'orca'] : [args.commandName]
+    for (const name of names) {
+      await writeFile(join(dirname(launcherPath), name), twin, { encoding: 'utf8' })
+    }
+  }
   return launcherPath
 }
 

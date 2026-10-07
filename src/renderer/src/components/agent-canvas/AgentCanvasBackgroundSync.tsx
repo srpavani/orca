@@ -16,25 +16,30 @@ export function AgentCanvasBackgroundSync(): null {
   const tabsByWorktree = useAppStore((state) => state.tabsByWorktree)
   const branches = useWorktreeBranches()
   const loaded = useAgentCanvas((state) => state.loaded)
-  const sessions = React.useMemo(() => {
+  const { sessions, foreign } = React.useMemo(() => {
     // Why: each project's board holds only that repository's terminals.
-    const projectTabs =
-      projectKey === null
-        ? tabsByWorktree
-        : Object.fromEntries(
-            Object.entries(tabsByWorktree).filter(
-              ([worktreeId]) => getRepoIdFromWorktreeId(worktreeId) === projectKey
-            )
-          )
-    return liveSessionsFromTabs(projectTabs, branches)
+    const ours = (worktreeId: string): boolean =>
+      projectKey === null || getRepoIdFromWorktreeId(worktreeId) === projectKey
+    const entries = Object.entries(tabsByWorktree)
+    return {
+      sessions: liveSessionsFromTabs(
+        Object.fromEntries(entries.filter(([worktreeId]) => ours(worktreeId))),
+        branches
+      ),
+      foreign: new Set(
+        entries
+          .filter(([worktreeId]) => !ours(worktreeId))
+          .flatMap(([, tabs]) => tabs.map((tab) => tab.id))
+      )
+    }
   }, [tabsByWorktree, branches, projectKey])
 
   // Why a slow poll here: the open canvas page runs its own faster sync on top of this one.
   React.useEffect(() => startCanvasHostSync(5000), [])
 
   React.useEffect(() => {
-    syncCanvasSessions(sessions)
-  }, [sessions, loaded])
+    syncCanvasSessions(sessions, foreign)
+  }, [sessions, foreign, loaded])
 
   return null
 }

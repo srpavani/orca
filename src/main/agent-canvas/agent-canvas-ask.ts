@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type {
   RuntimeTerminalRead,
   RuntimeTerminalSend,
@@ -15,15 +16,27 @@ import { awaitAskBack, deliverAskBack } from './agent-canvas-ask-back'
 
 /** The slice of the Orca runtime an ask drives; kept narrow so tests can fake it. */
 export type AgentCanvasAskRuntime = {
-  listTerminals(): Promise<{ terminals: { handle: string; tabId: string; connected: boolean }[] }>
+  listTerminals(): Promise<{
+    terminals: {
+      handle: string
+      tabId: string
+      connected: boolean
+      lastOutputAt?: number | null
+    }[]
+  }>
   readTerminal(
     handle: string,
-    opts: { cursor?: number; limit?: number }
+    opts: { cursor?: number; limit?: number; screen?: boolean }
   ): Promise<RuntimeTerminalRead>
   sendTerminalAgentPrompt(
     handle: string,
     prompt: string,
-    options: { inputKind: 'driving'; acceptQueued: true; observationTimeoutMs: number }
+    options: {
+      inputKind: 'driving'
+      acceptQueued: true
+      observationTimeoutMs: number
+      requestId: string
+    }
   ): Promise<RuntimeTerminalSend>
   waitForTerminal(
     handle: string,
@@ -45,6 +58,8 @@ export type AgentCanvasAskResult = {
 }
 
 export const DEFAULT_ASK_TIMEOUT_MS = 10 * 60 * 1000
+/** How long a peer may take to start its turn; a busy peer queues the prompt meanwhile. */
+const TURN_START_TIMEOUT_MS = 30_000
 const REPLY_LINE_LIMIT = 2000
 
 export function framePrompt(callerLabel: string, prompt: string): string {
@@ -112,17 +127,20 @@ export async function askConnectedPeer(input: {
     await runtime.sendTerminalAgentPrompt(terminal.handle, framePrompt(caller, input.prompt), {
       inputKind: 'driving',
       acceptQueued: true,
-      observationTimeoutMs: 0
+      // Why a request id: only then does the send wait for the agent's hook to report the
+      // turn started. Without it the paste echo counts as proof, the status still reads idle,
+      // and the idle wait below returns before the peer has even begun.
+      requestId: `canvas-ask-${randomUUID()}`,
+      observationTimeoutMs: TURN_START_TIMEOUT_MS
     })
     const outcome = await Promise.race([
       askBack.reply.then((reply) => ({ kind: 'ask-back' as const, reply })),
-      runtime
-        .waitForTerminal(terminal.handle, {
-          condition: 'tui-idle',
-          timeoutMs: input.timeoutMs ?? DEFAULT_ASK_TIMEOUT_MS,
-          signal: stopWaiting.signal
-        })
-        .then((wait) => ({ kind: 'idle' as const, wait }))
+      waitUntilSettled(
+        runtime,
+        terminal.handle,
+        Date.now() + (input.timeoutMs ?? DEFAULT_ASK_TIMEOUT_MS),
+        stopWaiting.signal
+      ).then((wait) => ({ kind: 'idle' as const, wait }))
     ])
     const peerView = { sessionId: peer.sessionId, label: peer.label, handle: terminal.handle }
     if (outcome.kind === 'ask-back') {
@@ -132,9 +150,19 @@ export async function askConnectedPeer(input: {
       ...(startCursor === undefined ? {} : { cursor: startCursor }),
       limit: REPLY_LINE_LIMIT
     })
+    let reply = after.tail.join('\n').trim()
+    if (reply === '') {
+      // Why: a full-screen TUI (OpenCode, Codex) repaints in place, so the stream after
+      // the prompt can be empty while the answer is on screen.
+      const screen = await runtime.readTerminal(terminal.handle, {
+        limit: REPLY_LINE_LIMIT,
+        screen: true
+      })
+      reply = screen.tail.join('\n').trim()
+    }
     return {
       peer: peerView,
-      reply: after.tail.join('\n').trim(),
+      reply,
       settled: outcome.wait.satisfied,
       source: 'screen',
       ...(outcome.wait.blockedReason ? { blockedReason: outcome.wait.blockedReason } : {})
@@ -144,6 +172,39 @@ export async function askConnectedPeer(input: {
     // Why: an ask-back answer leaves the idle wait running; release it.
     stopWaiting.abort()
     input.signal?.removeEventListener('abort', onAbort)
+  }
+}
+
+/** A peer that painted this recently is still mid-turn (a spinner, streamed text). */
+export const STILL_PAINTING_MS = 1_500
+
+/**
+ * Waits for the peer's turn to really end. Why not one `tui-idle` wait: right after
+ * a prompt lands the agent's status can still read idle (Claude Code reports
+ * working only once its UserPromptSubmit hook returns), so the first verdict may
+ * come before the turn has begun. A peer still painting its screen is not done.
+ */
+async function waitUntilSettled(
+  runtime: AgentCanvasAskRuntime,
+  handle: string,
+  deadline: number,
+  signal: AbortSignal
+): Promise<RuntimeTerminalWait> {
+  for (;;) {
+    const wait = await runtime.waitForTerminal(handle, {
+      condition: 'tui-idle',
+      timeoutMs: Math.max(1, deadline - Date.now()),
+      signal
+    })
+    if (!wait.satisfied || wait.blockedReason || Date.now() >= deadline) {
+      return wait
+    }
+    const { terminals } = await runtime.listTerminals()
+    const lastOutputAt = terminals.find((row) => row.handle === handle)?.lastOutputAt ?? null
+    if (lastOutputAt === null || Date.now() - lastOutputAt >= STILL_PAINTING_MS) {
+      return wait
+    }
+    await new Promise((resolve) => setTimeout(resolve, STILL_PAINTING_MS))
   }
 }
 
@@ -236,8 +297,11 @@ export async function readConnectedPeer(input: {
       `"${peer.label}" is on the canvas but its terminal is not running.`
     )
   }
+  // Why the rendered screen: the raw stream replays every redraw, so a shell's
+  // line editor shows each keystroke as its own echo; the reference reads the screen.
   const read = await input.runtime.readTerminal(terminal.handle, {
-    limit: input.lines ?? DEFAULT_CHECK_LINES
+    limit: input.lines ?? DEFAULT_CHECK_LINES,
+    screen: true
   })
   return {
     peer: { sessionId: peer.sessionId, label: peer.label, handle: terminal.handle },

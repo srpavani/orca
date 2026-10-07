@@ -1,4 +1,5 @@
 import type { AgentCanvasSnapshot } from '../../../../shared/spatial-canvas/agent-canvas-snapshot'
+import { rebaseDocument } from '../../../../shared/spatial-canvas/document-rebase'
 import type { CanvasDocument, CanvasViewport } from '../../../../shared/spatial-canvas/types'
 
 export type CanvasLocalState = {
@@ -25,24 +26,32 @@ export type CanvasHostTransport = {
   >
 }
 
+/** What the renderer last reconciled with: the base of a three-way merge. */
+export type CanvasHostBase = {
+  revision: number
+  notes: Record<string, string>
+  document: CanvasDocument
+}
+
 /**
- * Merges agent-written note bodies into a local edit that lost a revision race:
- * the user's layout and wires win, and any note the agent changed keeps the
- * agent's text unless the user also edited that same note locally.
+ * Merges what the host changed into a local edit that lost a revision race.
+ * Cards and wires an agent added or removed are replayed onto the user's
+ * document; a note the agent changed keeps its text unless the user edited it
+ * too, and a note the agent created is added.
  */
 export function rebaseLocalEdit(
   local: CanvasLocalState,
-  base: Record<string, string>,
+  base: Omit<CanvasHostBase, 'revision'>,
   host: AgentCanvasSnapshot
 ): CanvasLocalState {
   const notes = { ...local.notes }
   for (const [noteId, hostBody] of Object.entries(host.notes)) {
-    const userEdited = local.notes[noteId] !== base[noteId]
-    if (!userEdited && noteId in notes) {
+    const userEdited = local.notes[noteId] !== base.notes[noteId]
+    if (!userEdited || !(noteId in base.notes)) {
       notes[noteId] = hostBody
     }
   }
-  return { ...local, notes }
+  return { ...local, notes, document: rebaseDocument(local.document, base.document, host.document) }
 }
 
 /**
@@ -53,19 +62,25 @@ export function rebaseLocalEdit(
 export async function pushToHost(
   transport: CanvasHostTransport,
   local: CanvasLocalState,
-  base: { revision: number; notes: Record<string, string> }
+  base: CanvasHostBase
 ): Promise<AgentCanvasSnapshot> {
   let attempt = local
   let baseRevision = base.revision
   let baseNotes = base.notes
+  let baseDocument = base.document
   for (let tries = 0; tries < 3; tries += 1) {
     const result = await transport.save({ ...attempt, baseRevision })
     if (result.accepted || result.reason === 'invalid') {
       return result.snapshot
     }
-    attempt = rebaseLocalEdit(attempt, baseNotes, result.snapshot)
+    attempt = rebaseLocalEdit(
+      attempt,
+      { notes: baseNotes, document: baseDocument },
+      result.snapshot
+    )
     baseRevision = result.snapshot.revision
     baseNotes = result.snapshot.notes
+    baseDocument = result.snapshot.document
   }
   const latest = await transport.get()
   if (latest.unchanged) {

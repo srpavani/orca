@@ -22,14 +22,27 @@ describe('rebaseLocalEdit', () => {
     const base = { plan: 'v1', todo: 'a' }
     const mine = local({ plan: 'v1', todo: 'a, b (user)' })
     const host = snapshot(5, { plan: 'v2 (agent)', todo: 'a' })
-    expect(rebaseLocalEdit(mine, base, host).notes).toEqual({
+    expect(rebaseLocalEdit(mine, { notes: base, document: createDocument() }, host).notes).toEqual({
       plan: 'v2 (agent)',
       todo: 'a, b (user)'
     })
   })
 
+  it('adds a note an agent created while the user was editing', () => {
+    const rebased = rebaseLocalEdit(
+      local({ mine: 'x' }),
+      { notes: { mine: 'x' }, document: createDocument() },
+      snapshot(3, { mine: 'x', created: 'by agent' })
+    )
+    expect(rebased.notes).toEqual({ mine: 'x', created: 'by agent' })
+  })
+
   it('does not resurrect a note the user deleted locally', () => {
-    const rebased = rebaseLocalEdit(local({}), { gone: 'x' }, snapshot(2, { gone: 'agent' }))
+    const rebased = rebaseLocalEdit(
+      local({}),
+      { notes: { gone: 'x' }, document: createDocument() },
+      snapshot(2, { gone: 'agent' })
+    )
     expect(rebased.notes).toEqual({})
   })
 })
@@ -57,7 +70,8 @@ describe('pushToHost', () => {
     }
     const saved = await pushToHost(transport, local({ n: 'base' }), {
       revision: 1,
-      notes: { n: 'base' }
+      notes: { n: 'base' },
+      document: createDocument()
     })
     expect(saves).toEqual([1, 3])
     expect(saved.revision).toBe(4)
@@ -75,7 +89,11 @@ describe('pushToHost', () => {
         return { accepted: false, reason: 'stale', snapshot: snapshot(50 + saves, {}) }
       }
     }
-    const saved = await pushToHost(transport, local({}), { revision: 0, notes: {} })
+    const saved = await pushToHost(transport, local({}), {
+      revision: 0,
+      notes: {},
+      document: createDocument()
+    })
     expect(saves).toBe(3)
     expect(saved.notes).toEqual({ winner: 'host' })
   })

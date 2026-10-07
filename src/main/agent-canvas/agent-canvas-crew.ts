@@ -7,7 +7,7 @@ import {
 } from '../../shared/spatial-canvas/document'
 import { sessionNode } from '../../shared/spatial-canvas/levels'
 import { duplicateSessionLabel } from '../../shared/spatial-canvas/reachability'
-import { gridSlot } from '../../shared/spatial-canvas/session-placement'
+import { freeGridSlot } from '../../shared/spatial-canvas/session-placement'
 import type { CanvasDocument, CanvasSessionContent } from '../../shared/spatial-canvas/types'
 import type { TuiAgent } from '../../shared/tui-agent'
 import { AgentCanvasAccessError } from './agent-canvas-peers'
@@ -136,11 +136,10 @@ export async function recruitIntoProject(input: {
     input.launch,
     input.signal
   )
-  const sessions = input.board.document.root.nodes.filter((node) => node.content.kind === 'session')
   const draft = createSessionNode({
     sessionId: term.tabId,
     label: input.name,
-    at: gridSlot(sessions.length)
+    at: freeGridSlot(input.board.document.root)
   })
   const card = {
     ...draft,

@@ -90,8 +90,9 @@ export const AGENT_CANVAS_CREW_METHODS = [
       const launch = launchOf(params, role, await agentOf(runtime, caller.caller))
       if (params.replace !== undefined) {
         const { peer, store, linkedProjectKey } = crewPeerOf(runtime, caller, params.replace)
+        const before = store.get().document
         const swapped = await replaceAgent({
-          document: store.get().document,
+          document: before,
           runtime,
           sessionId: peer.sessionId,
           ...(params.name ? { name: params.name } : {}),
@@ -99,7 +100,7 @@ export const AGENT_CANVAS_CREW_METHODS = [
           ...(role ? { roleId: role.id } : {}),
           ...(signal ? { signal } : {})
         })
-        const saved = store.update((current) => ({ ...current, document: swapped.document }))
+        const saved = store.applyDelta(before, swapped.document)
         if (linkedProjectKey !== null || caller.projectKey !== null) {
           getAgentCanvasCrossLinks().renameSession(
             { projectKey: linkedProjectKey ?? caller.projectKey ?? '', sessionId: peer.sessionId },
@@ -130,8 +131,9 @@ export const AGENT_CANVAS_CREW_METHODS = [
           )
         }
         const store = getAgentCanvasStore(repo.id)
+        const board = store.get()
         const placed = await recruitIntoProject({
-          board: store.get(),
+          board,
           runtime,
           worktreeId: getRepoMainWorktreeId(repo),
           name,
@@ -139,7 +141,7 @@ export const AGENT_CANVAS_CREW_METHODS = [
           roleId: role?.id ?? null,
           ...(signal ? { signal } : {})
         })
-        const saved = store.update((current) => ({ ...current, document: placed.document }))
+        const saved = store.applyDelta(board.document, placed.document)
         getAgentCanvasCrossLinks().add(
           { projectKey: caller.projectKey, sessionId: caller.caller },
           { projectKey: repo.id, sessionId: placed.sessionId },
@@ -168,9 +170,9 @@ export const AGENT_CANVAS_CREW_METHODS = [
         roleId: role?.id ?? null,
         ...(signal ? { signal } : {})
       })
-      // Why one store update for the card and its wire: a card without the connection
+      // Why one write for the card and its wire: a card without the connection
       // would be an agent the team can see and never ask anything.
-      const saved = caller.store.update((current) => ({ ...current, document: result.document }))
+      const saved = caller.store.applyDelta(caller.snapshot.document, result.document)
       return {
         session: { sessionId: result.sessionId, label: result.label, handle: result.handle },
         floor: result.levelId,
@@ -185,12 +187,13 @@ export const AGENT_CANVAS_CREW_METHODS = [
     handler: async (params, { runtime }) => {
       const caller = await callerOf(runtime, params)
       const { peer, store, linkedProjectKey } = crewPeerOf(runtime, caller, params.to)
+      const before = store.get().document
       const document = await dismissAgent({
-        document: store.get().document,
+        document: before,
         runtime,
         sessionId: peer.sessionId
       })
-      const saved = store.update((current) => ({ ...current, document }))
+      const saved = store.applyDelta(before, document)
       const projectKey = linkedProjectKey ?? caller.projectKey
       if (projectKey !== null) {
         getAgentCanvasCrossLinks().forgetSession({ projectKey, sessionId: peer.sessionId })
