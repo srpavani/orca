@@ -3,6 +3,7 @@
 export type TuiAgent =
   | 'claude' // Claude Code
   | 'claude-agent-teams' // Claude Code Agent Teams via Orca native panes
+  | 'loboguara' // Claude Code on a Lobo-Guará subscription, via `orca loboguara`
   | 'codebuddy' // CodeBuddy Code
   | 'openclaude' // OpenClaude
   | 'codex' // OpenAI Codex
