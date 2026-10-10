@@ -21,6 +21,7 @@ import {
   type CardHeaderDrag
 } from './AgentCanvasCardHeaders'
 import { AgentCanvasTextBlockBody } from './AgentCanvasTextBlockBody'
+import { AgentCanvasResizeHandles } from './AgentCanvasResizeHandles'
 
 type AgentCanvasNodeCardProps = {
   node: CanvasNode
@@ -106,6 +107,14 @@ function SelectionMarks(props: { marks: 'brackets' | 'dots' }): React.JSX.Elemen
     </>
   )
 }
+
+/** Cards with a body worth sizing; a text block grows with its text. */
+const RESIZABLE_KINDS: ReadonlySet<CanvasNode['content']['kind']> = new Set([
+  'session',
+  'portal',
+  'note',
+  'fileTree'
+])
 
 function noteColor(node: CanvasNode): CanvasNoteColor {
   return parseNoteColor(node.content.kind === 'note' ? node.content.color : undefined) ?? 'yellow'
@@ -272,6 +281,7 @@ export function AgentCanvasNodeCard(props: AgentCanvasNodeCardProps): React.JSX.
       {selected && props.selection.marks !== 'none' ? (
         <SelectionMarks marks={props.selection.marks} />
       ) : null}
+      {RESIZABLE_KINDS.has(kind) ? <AgentCanvasResizeHandles node={node} zoom={zoom} /> : null}
       <button
         type="button"
         className="absolute -right-2 top-1/2 size-4 -translate-y-1/2 rounded-full border border-canvas-rope bg-canvas-surface opacity-0 hover:opacity-100"

@@ -17600,6 +17600,7 @@
           }
         },
         "removeBlur": "Remove blur",
+        "resizeCard": "Drag to resize",
         "blur": "Blur",
         "copyContents": "Copy contents",
         "showChrome": "Show toolbar",

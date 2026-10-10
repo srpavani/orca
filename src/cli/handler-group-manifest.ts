@@ -18,6 +18,11 @@ export const HANDLER_GROUPS: readonly HandlerGroup[] = [
     load: async () => (await import('./handlers/core.js')).CORE_HANDLERS
   },
   {
+    name: 'loboguara',
+    keys: ['loboguara'],
+    load: async () => (await import('./handlers/loboguara.js')).LOBO_GUARA_HANDLERS
+  },
+  {
     name: 'account',
     keys: ['account add', 'account list'],
     load: async () => (await import('./handlers/account.js')).ACCOUNT_HANDLERS

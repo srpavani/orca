@@ -378,6 +378,7 @@ import {
   WorkspaceSelection
 } from './linear-params'
 import { CreateProject } from './linear-project-create-params'
+import { LoboGuaraEmptyParams, LoboGuaraPrepareLaunchParams } from './loboguara-params'
 import { NativeChatSession, NativeChatUnsubscribe } from './native-chat-params'
 import {
   NotificationGetMissedSinceParams,
@@ -1036,6 +1037,10 @@ export const RPC_PARAMS_BY_METHOD = {
   'linear.teamStates': TeamId,
   'linear.testConnection': WorkspaceSelection,
   'linear.updateIssue': IssueUpdateOfLinearParams,
+  'loboguara.prepareLaunch': LoboGuaraPrepareLaunchParams,
+  'loboguara.signIn': LoboGuaraEmptyParams,
+  'loboguara.signOut': LoboGuaraEmptyParams,
+  'loboguara.status': LoboGuaraEmptyParams,
   'markdown.readTab': ActivateTab,
   'markdown.saveTab': SaveMarkdownTab,
   'mobileWeb.bundle.chunk': MobileWebBundleChunkParamsSchema,

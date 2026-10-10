@@ -2,6 +2,7 @@ import { getCatalogPlatform } from './agent-catalog-platform'
 import type React from 'react'
 import { ClaudeIcon, DroidIcon, OpenAIIcon } from '@/components/status-bar/icons'
 import openClaudeLogoUrl from '../../../../resources/openclaude-logo.png?url'
+import { LOBO_GUARA_CATALOG_ENTRY } from './agent-catalog-loboguara'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { getTuiAgentLaunchCommand, TUI_AGENT_CONFIG } from '../../../shared/tui-agent-config'
 import {
@@ -44,6 +45,7 @@ export const getAgentCatalog = createLocalizedCatalog((): AgentCatalogEntry[] =>
     cmd: getTuiAgentLaunchCommand(TUI_AGENT_CONFIG['claude-agent-teams'], getCatalogPlatform()),
     homepageUrl: 'https://code.claude.com/docs/en/agent-teams'
   },
+  LOBO_GUARA_CATALOG_ENTRY,
   {
     id: 'openclaude',
     label: translate('auto.lib.agent.catalog.a5fc0cb622', 'OpenClaude'),

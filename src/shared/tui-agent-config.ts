@@ -50,6 +50,23 @@ const TUI_AGENT_CONFIG_SOURCE: Record<TuiAgent, TuiAgentConfigSource> = {
     pasteNeedsTypedRequest: true,
     preflightTrust: 'claude'
   },
+  loboguara: {
+    // Why: Claude Code behind the Orca CLI, which injects the Lobo-Guará gateway token.
+    detectCmd: 'orca',
+    detectCmdAliases: ['orca-dev', 'orca-ide'],
+    detectRequiredCommands: ['claude'],
+    detectUnsupportedRuntimes: ['wsl'],
+    launchCmd: 'orca loboguara',
+    launchCmdByPlatform: {
+      linux: `${getOrcaCliCommandNameForPlatform('linux')} loboguara`,
+      win32: `${getOrcaCliCommandNameForPlatform('win32')} loboguara`
+    },
+    expectedProcess: 'claude',
+    promptInjectionMode: 'argv',
+    pasteNeedsTypedRequest: true,
+    draftPromptFlag: '--prefill',
+    preflightTrust: 'claude'
+  },
   codebuddy: {
     detectCmd: 'codebuddy',
     detectCmdAliases: ['cbc'],
