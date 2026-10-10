@@ -1,4 +1,4 @@
-name: Fork macOS test build
+name: Fork test build (macOS + Windows)
 
 # Why a fork-only branch: builds an unsigned, ad-hoc-signed macOS app of the canvas
 # work for hand testing, without the stablyai signing/notary secrets the official
@@ -70,5 +70,59 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/setup@v2
+        with:
+          install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            mobile/pnpm-lock.yaml
+
+      - name: Install dependencies
+        uses: nick-fields/retry@v4
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: pnpm install --frozen-lockfile
+
+      - uses: ./.github/actions/install-mobile-dependencies
+
+      - name: Build Windows process-table addon for the relay
+        shell: bash
+        run: |
+          node config/scripts/build-windows-process-tree-relay-addon.mjs --arch=x64
+          node config/scripts/build-windows-process-tree-relay-addon.mjs --arch=arm64
+
+      - name: Build unsigned Windows installer
+        shell: bash
+        run: |
+          pnpm run build:desktop
+          pnpm run ensure:electron-runtime
+          pnpm exec electron-builder --config config/electron-builder.config.cjs --win --publish never
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: orca-canvas-windows
+          path: dist/*.exe
           if-no-files-found: error
           retention-days: 14
